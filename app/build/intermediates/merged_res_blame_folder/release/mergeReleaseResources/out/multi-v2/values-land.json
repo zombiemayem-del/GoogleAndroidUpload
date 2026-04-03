@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.ballrun2048.app-mergeReleaseResources-22:/values-land/values-land.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\lorea\\.gradle\\caches\\8.14.3\\transforms\\5181c8ba5e837abf7c97ed69b97c5c54\\transformed\\appcompat-1.7.0\\res\\values-land\\values-land.xml",
+                    "from": {
+                        "startLines": "2,3,4",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,125,196",
+                        "endColumns": "69,70,67",
+                        "endOffsets": "120,191,259"
+                    }
+                }
+            ]
+        }
+    ]
+}

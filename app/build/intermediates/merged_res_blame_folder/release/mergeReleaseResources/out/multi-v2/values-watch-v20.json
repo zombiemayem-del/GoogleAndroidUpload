@@ -1,0 +1,20 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.ballrun2048.app-mergeReleaseResources-22:/values-watch-v20/values-watch-v20.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\lorea\\.gradle\\caches\\8.14.3\\transforms\\5181c8ba5e837abf7c97ed69b97c5c54\\transformed\\appcompat-1.7.0\\res\\values-watch-v20\\values-watch-v20.xml",
+                    "from": {
+                        "startLines": "2,5,8",
+                        "startColumns": "4,4,4",
+                        "startOffsets": "55,214,385",
+                        "endLines": "4,7,10",
+                        "endColumns": "12,12,12",
+                        "endOffsets": "209,380,553"
+                    }
+                }
+            ]
+        }
+    ]
+}

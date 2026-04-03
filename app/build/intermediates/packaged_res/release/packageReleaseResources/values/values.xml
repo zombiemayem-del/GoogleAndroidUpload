@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Ball Run 2048</string>
+    <string name="asset_statements">
+        [{
+            \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+            \"target\": {
+                \"namespace\": \"web\",
+                \"site\": \"https://zombiemayem-del.github.io\"
+            }
+        }]
+    </string>
+    <style name="Theme.BallRun2048" parent="Theme.AppCompat.NoActionBar">
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">#FFD43B</item>
+        <item name="android:navigationBarColor">#00D2FF</item>
+    </style>
+</resources>
