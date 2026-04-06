@@ -683,7 +683,7 @@ function getTrackKind(segmentIndex) {
       playerLabelPlane.position = new BABYLON.Vector3(0, pCarS * 2.5 + 0.8, 0);
       playerLabelPlane.rotation.x = Math.PI / 2;
       playerLabelPlane.rotation.y = Math.PI;
-      playerLabelPlane.rotation.z = Math.PI / 2;
+      playerLabelPlane.rotation.z = 0;
       playerLabelPlane.scaling = new BABYLON.Vector3(3, 3, 3);
     }
 
@@ -991,7 +991,7 @@ function getTrackKind(segmentIndex) {
       label.plane.position = new BABYLON.Vector3(0, labelY, 0);
       label.plane.rotation.x = Math.PI / 2;
       label.plane.rotation.y = Math.PI;
-      label.plane.rotation.z = Math.PI / 2;
+      label.plane.rotation.z = 0;
       label.plane.scaling = new BABYLON.Vector3(3, 3, 3);
 
       const collectible = {
