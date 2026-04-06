@@ -680,8 +680,9 @@ function getTrackKind(segmentIndex) {
       playerLabelTexture = label.texture;
       playerLabelPlane.parent = playerBall;
       const pCarS = (carScaleMap[state.playerValue] || 0.6) + 0.3;
-      playerLabelPlane.position = new BABYLON.Vector3(0, pCarS * 2 + 0.5, 0);
-      playerLabelPlane.rotation.x = -Math.PI / 2;
+      playerLabelPlane.position = new BABYLON.Vector3(0, pCarS * 2.5 + 0.8, 0);
+      playerLabelPlane.rotation.x = Math.PI / 2;
+      playerLabelPlane.rotation.y = Math.PI;
       playerLabelPlane.rotation.z = Math.PI / 2;
       playerLabelPlane.scaling = new BABYLON.Vector3(3, 3, 3);
     }
@@ -912,7 +913,7 @@ function getTrackKind(segmentIndex) {
       }
       drawLabel(playerLabelTexture, state.playerValue, "#172038");
       const upCarS = (carScaleMap[state.playerValue] || 0.6) + 0.3;
-      playerLabelPlane.position = new BABYLON.Vector3(0, upCarS * 2 + 0.5, 0);
+      playerLabelPlane.position = new BABYLON.Vector3(0, upCarS * 2.5 + 0.8, 0);
       scoreValue.textContent = String(state.score);
     }
 
@@ -986,9 +987,10 @@ function getTrackKind(segmentIndex) {
       const label = buildLabel(scene, value);
       label.plane.parent = root;
       const carS = (carScaleMap[value] || 0.6) + 0.3;
-      const labelY = carS * 2 + 0.5;
+      const labelY = carS * 2.5 + 0.8;
       label.plane.position = new BABYLON.Vector3(0, labelY, 0);
-      label.plane.rotation.x = -Math.PI / 2;
+      label.plane.rotation.x = Math.PI / 2;
+      label.plane.rotation.y = Math.PI;
       label.plane.rotation.z = Math.PI / 2;
       label.plane.scaling = new BABYLON.Vector3(3, 3, 3);
 
