@@ -679,8 +679,10 @@ function getTrackKind(segmentIndex) {
       playerLabelPlane = label.plane;
       playerLabelTexture = label.texture;
       playerLabelPlane.parent = playerBall;
-      playerLabelPlane.position = new BABYLON.Vector3(0, 2 + (carScaleMap[state.playerValue] || 0.6) * 2, 0);
-      playerLabelPlane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+      const pCarS = (carScaleMap[state.playerValue] || 0.6) + 0.3;
+      playerLabelPlane.position = new BABYLON.Vector3(0, pCarS * 1.8 + 0.3, 0);
+      playerLabelPlane.rotation.x = -Math.PI / 2;
+      playerLabelPlane.scaling = new BABYLON.Vector3(2.5, 2.5, 2.5);
     }
 
     function buildLabel(scene, value, texSize) {
@@ -908,7 +910,8 @@ function getTrackKind(segmentIndex) {
         state.playerCarMesh.position = BABYLON.Vector3.Zero();
       }
       drawLabel(playerLabelTexture, state.playerValue, "#172038");
-      playerLabelPlane.position = new BABYLON.Vector3(0, 2 + (carScaleMap[state.playerValue] || 0.6) * 2, 0);
+      const upCarS = (carScaleMap[state.playerValue] || 0.6) + 0.3;
+      playerLabelPlane.position = new BABYLON.Vector3(0, upCarS * 1.8 + 0.3, 0);
       scoreValue.textContent = String(state.score);
     }
 
@@ -981,9 +984,11 @@ function getTrackKind(segmentIndex) {
 
       const label = buildLabel(scene, value);
       label.plane.parent = root;
-      const labelY = 2 + (carScaleMap[value] || 0.6) * 2;
+      const carS = (carScaleMap[value] || 0.6) + 0.3;
+      const labelY = carS * 1.8 + 0.3;
       label.plane.position = new BABYLON.Vector3(0, labelY, 0);
-      label.plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
+      label.plane.rotation.x = -Math.PI / 2;
+      label.plane.scaling = new BABYLON.Vector3(2.5, 2.5, 2.5);
 
       const collectible = {
         lane: laneIndex,
