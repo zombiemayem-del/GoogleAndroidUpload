@@ -670,15 +670,6 @@ function getTrackKind(segmentIndex) {
         state.playerCarMesh.position = BABYLON.Vector3.Zero();
       }
 
-      const playerGizmo = BABYLON.MeshBuilder.CreateBox("player-gizmo", { width: 2.2, height: 1.2, depth: 3.5 }, scene);
-      playerGizmo.parent = playerBall;
-      playerGizmo.position.y = 0.6;
-      const pgMat = new BABYLON.StandardMaterial("player-gizmo-mat", scene);
-      pgMat.wireframe = true;
-      pgMat.emissiveColor = new BABYLON.Color3(0, 1, 0);
-      pgMat.alpha = 0.5;
-      playerGizmo.material = pgMat;
-
       const label = buildLabel(scene, state.playerValue);
       playerLabelPlane = label.plane;
       playerLabelTexture = label.texture;
@@ -985,15 +976,6 @@ function getTrackKind(segmentIndex) {
       label.plane.parent = root;
       label.plane.position = new BABYLON.Vector3(0, 2, 0);
       label.plane.billboardMode = BABYLON.Mesh.BILLBOARDMODE_ALL;
-
-      const gizmo = BABYLON.MeshBuilder.CreateBox("gizmo-" + state.spawnId, { width: 2.2, height: 1.2, depth: 3.5 }, scene);
-      gizmo.parent = root;
-      gizmo.position.y = 0.6;
-      const gizmoMat = new BABYLON.StandardMaterial("gizmo-mat-" + state.spawnId, scene);
-      gizmoMat.wireframe = true;
-      gizmoMat.emissiveColor = new BABYLON.Color3(1, 0, 0);
-      gizmoMat.alpha = 0.5;
-      gizmo.material = gizmoMat;
 
       const collectible = {
         lane: laneIndex,
