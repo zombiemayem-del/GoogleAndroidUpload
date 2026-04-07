@@ -290,7 +290,7 @@
       return clone;
     }
 
-    const STAGE_LENGTH = 1200;
+    const STAGE_LENGTH = 1560;
     const RAMP_STEPS = 11;
     const RAMP_MULTIPLIERS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048];
     const RAMP_COLORS = RAMP_MULTIPLIERS.map((v) => colorMap[v] || "#ffffff");
@@ -949,7 +949,7 @@ function getTrackKind(segmentIndex) {
             const playerPow = Math.max(1, Math.floor(Math.log2(Math.max(2, state.playerValue))));
             const roll = Math.random();
             let pow;
-            if (roll < 0.50) {
+            if (roll < 0.60) {
               pow = playerPow;
             } else if (roll < 0.80) {
               pow = playerPow + 1 + Math.floor(Math.random() * Math.min(3, 11 - playerPow));
