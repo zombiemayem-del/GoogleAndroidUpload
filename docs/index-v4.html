@@ -727,7 +727,7 @@ function getTrackKind(segmentIndex) {
       const size = texture.getSize();
       const context = texture.getContext();
       context.clearRect(0, 0, size.width, size.height);
-      const baseSize = size.width > 300 ? 240 : 100;
+      const baseSize = size.width > 800 ? 400 : (size.width > 300 ? 240 : 100);
       const fontSize = String(text).length > 5 ? baseSize * 0.7 : (String(text).length > 4 ? baseSize * 0.8 : baseSize);
       context.font = "bold " + fontSize + "px Trebuchet MS";
       context.textAlign = "center";
@@ -802,7 +802,7 @@ function getTrackKind(segmentIndex) {
         step.material.roughness = 0.6;
         state.rampMeshes.push(step);
 
-        const labelLeft = buildLabel(sceneRef, "x" + RAMP_MULTIPLIERS[i], 512);
+        const labelLeft = buildLabel(sceneRef, "x" + RAMP_MULTIPLIERS[i], 1024);
         labelLeft.plane.scaling = new BABYLON.Vector3(1.8, 1.8, 1.8);
         labelLeft.plane.position = new BABYLON.Vector3(-stepWidth / 2 + 1.5, stepHeight + 0.01, i * stepDepth);
         labelLeft.plane.rotation.x = Math.PI / 2;
@@ -811,7 +811,7 @@ function getTrackKind(segmentIndex) {
         labelLeft.plane.scaling = new BABYLON.Vector3(1.8, 1.8, 1.8);
         drawLabelOutlined(labelLeft.texture, "x" + RAMP_MULTIPLIERS[i]);
 
-        const labelRight = buildLabel(sceneRef, "x" + RAMP_MULTIPLIERS[i], 512);
+        const labelRight = buildLabel(sceneRef, "x" + RAMP_MULTIPLIERS[i], 1024);
         labelRight.plane.position = new BABYLON.Vector3(stepWidth / 2 - 1.5, stepHeight + 0.01, i * stepDepth);
         labelRight.plane.rotation.x = Math.PI / 2;
         labelRight.plane.rotation.y = 0;
@@ -1134,7 +1134,7 @@ function getTrackKind(segmentIndex) {
       }
 
       playerBall.position.x = BABYLON.Scalar.Lerp(playerBall.position.x, state.targetX, Math.min(1, delta * 10));
-      playerBall.rotation.x += delta * (state.speed * 0.4);
+      playerBall.rotation.x += delta * (state.speed * 0.15);
       playerBall.rotation.z = BABYLON.Scalar.Lerp(playerBall.rotation.z, (state.targetX - playerBall.position.x) * 0.15, Math.min(1, delta * 8));
 
       if (state.isJumping) {
@@ -1144,6 +1144,8 @@ function getTrackKind(segmentIndex) {
           state.playerY = 1.0;
           state.isJumping = false;
           state.jumpVelocity = 0;
+          playCandyExplosion(playerBall.position.clone());
+          crushNearbyPets(playerBall.position);
         }
       }
       playerBall.position.y = state.playerY;
@@ -1505,7 +1507,7 @@ function checkForFall() {
           item.vx *= Math.exp(-2 * delta);
           item.vz *= Math.exp(-2 * delta);
           item.mesh.position.y = 1.0 + Math.abs(Math.sin(performance.now() * 0.005 + item.value)) * 0.3;
-          item.mesh.rotation.x += delta * (state.speed * 0.6 * 0.4);
+          item.mesh.rotation.x += delta * (state.speed * 0.15);
         }
 
         if (item.mesh.position.z < -8 || Math.abs(item.mesh.position.x) > 12) {
@@ -1700,6 +1702,92 @@ function checkForFall() {
       }
     }
 
+    function playJumpPuff(pos) {
+      for (let i = 0; i < 8; i++) {
+        const puff = BABYLON.MeshBuilder.CreateSphere("puff-" + Math.random(), { diameter: 0.4 + Math.random() * 0.3, segments: 4 }, scene);
+        puff.position = pos.clone();
+        puff.position.y = 0.3;
+        const mat = new BABYLON.StandardMaterial("puff-mat-" + Math.random(), scene);
+        mat.diffuseColor = new BABYLON.Color3(1, 1, 1);
+        mat.emissiveColor = new BABYLON.Color3(0.8, 0.8, 0.8);
+        mat.alpha = 0.7;
+        puff.material = mat;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 2;
+        const vx = Math.cos(angle) * speed;
+        const vz = Math.sin(angle) * speed;
+        let life = 0;
+        const obs = scene.onBeforeRenderObservable.add(() => {
+          const dt = scene.getEngine().getDeltaTime() / 1000;
+          life += dt;
+          puff.position.x += vx * dt;
+          puff.position.z += vz * dt;
+          puff.position.y += dt * 1.5;
+          const fade = Math.max(0, 1 - life / 0.5);
+          puff.scaling.x = 1 + life * 3;
+          puff.scaling.y = 1 + life * 3;
+          puff.scaling.z = 1 + life * 3;
+          puff.material.alpha = fade * 0.7;
+          if (life > 0.5) { scene.onBeforeRenderObservable.remove(obs); puff.dispose(); }
+        });
+      }
+    }
+
+    function playCandyExplosion(pos) {
+      const candyColors = ["#ff69b4", "#ff6347", "#ffd700", "#00ced1", "#9370db", "#ff8c00", "#32cd32", "#ff1493", "#00ff7f", "#ff4500"];
+      for (let i = 0; i < 25; i++) {
+        const candy = BABYLON.MeshBuilder.CreateBox("candy-" + Math.random(), { size: 0.15 + Math.random() * 0.15 }, scene);
+        candy.position = pos.clone();
+        candy.position.y = 0.5;
+        const mat = new BABYLON.StandardMaterial("candy-mat-" + Math.random(), scene);
+        const c = color3FromHex(candyColors[Math.floor(Math.random() * candyColors.length)]);
+        mat.diffuseColor = c;
+        mat.emissiveColor = c.scale(0.4);
+        candy.material = mat;
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 3 + Math.random() * 5;
+        const vx = Math.cos(angle) * speed;
+        const vz = Math.sin(angle) * speed;
+        const vy = 4 + Math.random() * 5;
+        const rotSpeed = new BABYLON.Vector3((Math.random() - 0.5) * 15, (Math.random() - 0.5) * 15, (Math.random() - 0.5) * 15);
+        let life = 0;
+        const obs = scene.onBeforeRenderObservable.add(() => {
+          const dt = scene.getEngine().getDeltaTime() / 1000;
+          life += dt;
+          candy.position.x += vx * dt;
+          candy.position.y += (vy - life * 14) * dt;
+          candy.position.z += vz * dt;
+          candy.rotation.x += rotSpeed.x * dt;
+          candy.rotation.y += rotSpeed.y * dt;
+          candy.rotation.z += rotSpeed.z * dt;
+          if (life > 1.5) { scene.onBeforeRenderObservable.remove(obs); candy.dispose(); }
+        });
+      }
+    }
+
+    function crushNearbyPets(pos) {
+      const crushRadius = 4;
+      state.collectibles = state.collectibles.filter((item) => {
+        if (item.launched) return true;
+        const dx = item.mesh.position.x - pos.x;
+        const dz = item.mesh.position.z - pos.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < crushRadius && item.value <= state.playerValue) {
+          const sideDir = dx === 0 ? (Math.random() > 0.5 ? 1 : -1) : Math.sign(dx);
+          const force = 8 + Math.random() * 5;
+          item.vx = sideDir * force;
+          item.vz = (Math.random() - 0.5) * force;
+          item.vy = 5 + Math.random() * 4;
+          item.launched = true;
+          item.spinSpeed = sideDir * (10 + Math.random() * 8);
+          state.score += item.value;
+          scoreValue.textContent = String(state.score);
+          return true;
+        }
+        return true;
+      });
+    }
+
     function playCollisionEffect(pos, intensity) {
       const sparkCount = Math.min(20, 3 + intensity * 3);
       const sparkSize = 0.1 + intensity * 0.05;
@@ -1794,7 +1882,8 @@ function checkForFall() {
       }
       if (event.key === " " && state.running && !state.isJumping) {
         state.isJumping = true;
-        state.jumpVelocity = 8;
+        state.jumpVelocity = 10;
+        playJumpPuff(playerBall.position.clone());
       }
     });
 
@@ -1831,7 +1920,8 @@ function checkForFall() {
       const deltaY = event.clientY - (state.touchStartY || event.clientY);
       if (deltaY < -30 && state.running && !state.isJumping) {
         state.isJumping = true;
-        state.jumpVelocity = 8;
+        state.jumpVelocity = 10;
+        playJumpPuff(playerBall.position.clone());
       } else if (Math.abs(deltaX) > 8) {
         state.targetX = clampTargetX(state.touchStartTargetX + deltaX * 0.022);
       }
