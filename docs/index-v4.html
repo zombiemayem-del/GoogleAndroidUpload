@@ -1125,7 +1125,8 @@ function getTrackKind(segmentIndex) {
       }
 
       playerBall.position.x = BABYLON.Scalar.Lerp(playerBall.position.x, state.targetX, Math.min(1, delta * 10));
-      playerBall.rotation.z = BABYLON.Scalar.Lerp(playerBall.rotation.z, (state.targetX - playerBall.position.x) * 0.06, Math.min(1, delta * 8));
+      playerBall.rotation.x += delta * (state.speed * 0.8);
+      playerBall.rotation.z = BABYLON.Scalar.Lerp(playerBall.rotation.z, (state.targetX - playerBall.position.x) * 0.15, Math.min(1, delta * 8));
 
       playerBall.scaling.x = 1;
       playerBall.scaling.y = 1;
@@ -1484,6 +1485,7 @@ function checkForFall() {
           item.vx *= Math.exp(-2 * delta);
           item.vz *= Math.exp(-2 * delta);
           item.mesh.position.y = Math.abs(Math.sin(performance.now() * 0.005 + item.value)) * 0.3;
+          item.mesh.rotation.x += delta * (state.speed * 0.6 * 0.8);
         }
 
         if (item.mesh.position.z < -8 || Math.abs(item.mesh.position.x) > 12) {
