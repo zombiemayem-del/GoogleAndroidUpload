@@ -1160,8 +1160,8 @@ function getTrackKind(segmentIndex) {
 
       const camera = scene.activeCamera;
       const valuePow = Math.log2(Math.max(2, state.playerValue));
-      const wantedRadius = cameraDefaults.radius + valuePow * 2;
-      camera.radius = BABYLON.Scalar.Lerp(camera.radius, wantedRadius, Math.min(1, delta * 1.5));
+      const wantedRadius = cameraDefaults.radius + valuePow * 4;
+      camera.radius = BABYLON.Scalar.Lerp(camera.radius, wantedRadius, Math.min(1, delta * 3));
       camera.target.x = BABYLON.Scalar.Lerp(camera.target.x, playerBall.position.x, Math.min(1, delta * 4));
       camera.target.y = cameraDefaults.target.y;
       camera.target.z = playerBall.position.z + 3;
