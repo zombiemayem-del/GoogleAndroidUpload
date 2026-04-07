@@ -326,7 +326,9 @@
       rampCurrentStep: -1,
       rampVisible: false,
       sceneryMeshes: [],
-      nextSpawnZ: 35
+      nextSpawnZ: 35,
+      rocketMode: false,
+      rocketParticleTimer: 0
     };
 
     let scene;
@@ -870,6 +872,8 @@ function getTrackKind(segmentIndex) {
       state.rampCurrentStep = -1;
       state.rampVisible = false;
       state.nextSpawnZ = 35;
+      state.rocketMode = false;
+      state.rocketParticleTimer = 0;
 
       state.collectibles.forEach((item) => disposeEntity(item));
       state.gates.forEach((item) => disposeThorn(item));
@@ -1098,6 +1102,9 @@ function getTrackKind(segmentIndex) {
 
       const valuePowSpeed = Math.log2(Math.max(2, state.playerValue));
       state.speed = 14 + valuePowSpeed * 1.5;
+      if (state.rocketMode) {
+        state.speed = Math.min(60, state.speed * 1.8 + delta * 2);
+      }
       state.speed += delta * 0.05;
       state.distance += state.speed * delta;
       const horizontalInput = (state.inputRight ? 1 : 0) - (state.inputLeft ? 1 : 0);
@@ -1113,6 +1120,53 @@ function getTrackKind(segmentIndex) {
       playerBall.scaling.x = 1;
       playerBall.scaling.y = 1;
       playerBall.scaling.z = 1;
+
+      if (state.rocketMode) {
+        state.rocketParticleTimer += delta;
+        if (state.rocketParticleTimer > 0.02) {
+          state.rocketParticleTimer = 0;
+          for (let i = 0; i < 3; i++) {
+            const flame = BABYLON.MeshBuilder.CreateSphere("flame-" + Math.random(), { diameter: 0.3 + Math.random() * 0.4, segments: 4 }, scene);
+            flame.position = playerBall.position.clone();
+            flame.position.x += (Math.random() - 0.5) * 1.5;
+            flame.position.y += 0.3 + Math.random() * 0.5;
+            flame.position.z -= 1.5 + Math.random();
+            const flameMat = new BABYLON.StandardMaterial("flame-mat-" + Math.random(), scene);
+            const flameColors = ["#ff4400", "#ff8800", "#ffcc00", "#ff2200", "#ffffff"];
+            const fc = color3FromHex(flameColors[Math.floor(Math.random() * flameColors.length)]);
+            flameMat.emissiveColor = fc;
+            flameMat.diffuseColor = fc;
+            flame.material = flameMat;
+            let life = 0;
+            const obs = scene.onBeforeRenderObservable.add(() => {
+              const dt = scene.getEngine().getDeltaTime() / 1000;
+              life += dt;
+              flame.position.z -= state.speed * dt * 0.5;
+              flame.position.y += (Math.random() - 0.3) * dt * 3;
+              flame.position.x += (Math.random() - 0.5) * dt * 2;
+              const fade = Math.max(0, 1 - life / 0.4);
+              flame.scaling.x = fade;
+              flame.scaling.y = fade;
+              flame.scaling.z = fade;
+              if (life > 0.4) {
+                scene.onBeforeRenderObservable.remove(obs);
+                flame.dispose();
+              }
+            });
+          }
+        }
+
+        const shakeX = (Math.random() - 0.5) * 0.15;
+        playerBall.position.x += shakeX;
+
+        if (scene.glowLayer) {
+          scene.glowLayer.intensity = 0.8;
+        }
+      } else {
+        if (scene.glowLayer) {
+          scene.glowLayer.intensity = 0.3;
+        }
+      }
 
       const camera = scene.activeCamera;
       const valuePow = Math.log2(Math.max(2, state.playerValue));
@@ -1611,8 +1665,8 @@ function checkForFall() {
       updatePlayerVisuals();
       playMergeEffect(playerBall.position.clone());
 
-      if (state.playerValue >= 2048) {
-        endGame("Congratulations! You reached 2048!");
+      if (state.playerValue >= 2048 && !state.rocketMode) {
+        state.rocketMode = true;
       }
     }
 
