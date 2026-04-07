@@ -688,6 +688,15 @@ function getTrackKind(segmentIndex) {
       playerLabelPlane.rotation.y = 0;
       playerLabelPlane.rotation.z = 0;
       playerLabelPlane.scaling = new BABYLON.Vector3(3, 3, 3);
+
+      state.playerShadow = BABYLON.MeshBuilder.CreateDisc("player-shadow", { radius: 1.2, tessellation: 24 }, scene);
+      state.playerShadow.rotation.x = Math.PI / 2;
+      state.playerShadow.position.y = 0.05;
+      const shadowMat = new BABYLON.StandardMaterial("shadow-mat", scene);
+      shadowMat.diffuseColor = new BABYLON.Color3(0, 0, 0);
+      shadowMat.alpha = 0.3;
+      shadowMat.specularColor = BABYLON.Color3.Black();
+      state.playerShadow.material = shadowMat;
     }
 
     function buildLabel(scene, value, texSize) {
@@ -1149,6 +1158,16 @@ function getTrackKind(segmentIndex) {
         }
       }
       playerBall.position.y = state.playerY;
+
+      if (state.playerShadow) {
+        state.playerShadow.position.x = playerBall.position.x;
+        state.playerShadow.position.z = playerBall.position.z;
+        const height = Math.max(0, state.playerY - 1.0);
+        const shadowScale = Math.max(0.3, 1 - height * 0.12);
+        state.playerShadow.scaling.x = shadowScale;
+        state.playerShadow.scaling.z = shadowScale;
+        state.playerShadow.material.alpha = Math.max(0.05, 0.3 - height * 0.04);
+      }
 
       playerBall.scaling.x = 1;
       playerBall.scaling.y = 1;
