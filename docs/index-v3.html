@@ -940,7 +940,7 @@ function getTrackKind(segmentIndex) {
     }
 
     function fillTrack() {
-      while (state.nextSpawnZ < state.distance + 80 && state.nextSpawnZ < STAGE_LENGTH * 0.92) {
+      while (state.nextSpawnZ < state.distance + 30 && state.nextSpawnZ < STAGE_LENGTH * 0.92) {
         if (Math.random() > 0.85) {
           spawnThorn(0, state.nextSpawnZ);
         } else {
@@ -1653,6 +1653,14 @@ function checkForFall() {
       state.bestBall = Math.max(state.bestBall, state.playerValue);
       updatePlayerVisuals();
       playMergeEffect(playerBall.position.clone());
+
+      const ahead = state.collectibles.filter((c) => !c.launched && c.mesh.position.z > playerBall.position.z);
+      const toConvert = Math.ceil(ahead.length * 0.3);
+      const shuffled = ahead.sort(() => Math.random() - 0.5);
+      for (let i = 0; i < toConvert && i < shuffled.length; i++) {
+        shuffled[i].value = state.playerValue;
+        updateCollectibleAppearance(shuffled[i]);
+      }
 
       if (state.playerValue >= 2048 && !state.rocketMode) {
         state.rocketMode = true;
