@@ -1164,7 +1164,7 @@ function getTrackKind(segmentIndex) {
       camera.radius = BABYLON.Scalar.Lerp(camera.radius, wantedRadius, Math.min(1, delta * 1.5));
       camera.target.x = BABYLON.Scalar.Lerp(camera.target.x, playerBall.position.x, Math.min(1, delta * 4));
       camera.target.y = cameraDefaults.target.y;
-      camera.target.z = playerBall.position.z + 6;
+      camera.target.z = playerBall.position.z + 3;
 
       recycleRoad(delta);
       updateScenery(delta);
