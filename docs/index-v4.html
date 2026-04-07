@@ -1767,16 +1767,23 @@ function checkForFall() {
 
     function crushNearbyPets(pos) {
       const crushRadius = 4;
+      const toSplit = [];
       state.collectibles = state.collectibles.filter((item) => {
         if (item.launched) return true;
         const dx = item.mesh.position.x - pos.x;
         const dz = item.mesh.position.z - pos.z;
         const dist = Math.sqrt(dx * dx + dz * dz);
-        if (dist < crushRadius && item.value <= state.playerValue) {
+        if (dist < crushRadius && item.value <= state.playerValue && item.value >= 4) {
+          toSplit.push({ x: item.mesh.position.x, z: item.mesh.position.z, value: item.value });
+          state.score += item.value;
+          scoreValue.textContent = String(state.score);
+          disposeEntity(item);
+          return false;
+        }
+        if (dist < crushRadius && item.value <= state.playerValue && item.value < 4) {
           const sideDir = dx === 0 ? (Math.random() > 0.5 ? 1 : -1) : Math.sign(dx);
-          const force = 8 + Math.random() * 5;
-          item.vx = sideDir * force;
-          item.vz = (Math.random() - 0.5) * force;
+          item.vx = sideDir * (8 + Math.random() * 5);
+          item.vz = (Math.random() - 0.5) * 6;
           item.vy = 5 + Math.random() * 4;
           item.launched = true;
           item.spinSpeed = sideDir * (10 + Math.random() * 8);
@@ -1785,6 +1792,22 @@ function checkForFall() {
           return true;
         }
         return true;
+      });
+
+      toSplit.forEach((s) => {
+        const halfValue = s.value / 2;
+        for (let side = -1; side <= 1; side += 2) {
+          const newX = s.x + side * 1.5;
+          spawnCollectible(0, s.z, halfValue, newX);
+          const spawned = state.collectibles[state.collectibles.length - 1];
+          if (spawned) {
+            spawned.vx = side * (4 + Math.random() * 3);
+            spawned.vz = (Math.random() - 0.5) * 3;
+            spawned.vy = 3 + Math.random() * 2;
+            spawned.launched = false;
+            spawned.mesh.position.y = 1.5;
+          }
+        }
       });
     }
 
