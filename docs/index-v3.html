@@ -949,9 +949,9 @@ function getTrackKind(segmentIndex) {
             const playerPow = Math.max(1, Math.floor(Math.log2(Math.max(2, state.playerValue))));
             const roll = Math.random();
             let pow;
-            if (roll < 0.40) {
+            if (roll < 0.50) {
               pow = playerPow;
-            } else if (roll < 0.85) {
+            } else if (roll < 0.80) {
               pow = playerPow + 1 + Math.floor(Math.random() * Math.min(3, 11 - playerPow));
             } else {
               pow = Math.max(1, playerPow - 1 - Math.floor(Math.random() * 2));
@@ -1160,7 +1160,7 @@ function getTrackKind(segmentIndex) {
 
       const camera = scene.activeCamera;
       const valuePow = Math.log2(Math.max(2, state.playerValue));
-      const wantedRadius = cameraDefaults.radius + valuePow * 4;
+      const wantedRadius = cameraDefaults.radius + valuePow * 1.5;
       camera.radius = BABYLON.Scalar.Lerp(camera.radius, wantedRadius, Math.min(1, delta * 0.5));
       camera.target.x = BABYLON.Scalar.Lerp(camera.target.x, playerBall.position.x, Math.min(1, delta * 4));
       camera.target.y = cameraDefaults.target.y;
