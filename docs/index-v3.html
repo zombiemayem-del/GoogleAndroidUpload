@@ -224,7 +224,7 @@
     const cameraDefaults = {
       alpha: -Math.PI / 2 + 0.15,
       beta: 0.85,
-      radius: 20,
+      radius: 17,
       target: new BABYLON.Vector3(0, 2, 16)
     };
     const colorMap = {
@@ -1161,10 +1161,10 @@ function getTrackKind(segmentIndex) {
       const camera = scene.activeCamera;
       const valuePow = Math.log2(Math.max(2, state.playerValue));
       const wantedRadius = cameraDefaults.radius + valuePow * 4;
-      camera.radius = BABYLON.Scalar.Lerp(camera.radius, wantedRadius, Math.min(1, delta * 3));
+      camera.radius = BABYLON.Scalar.Lerp(camera.radius, wantedRadius, Math.min(1, delta * 0.5));
       camera.target.x = BABYLON.Scalar.Lerp(camera.target.x, playerBall.position.x, Math.min(1, delta * 4));
       camera.target.y = cameraDefaults.target.y;
-      camera.target.z = playerBall.position.z + 3;
+      camera.target.z = playerBall.position.z + 5;
 
       recycleRoad(delta);
       updateScenery(delta);
