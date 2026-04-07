@@ -266,7 +266,7 @@
           pivot.parent = wrapper;
           const root = result.meshes[0];
           root.parent = pivot;
-          root.position.y = -0.5;
+          root.position.y = -0.7;
           wrapper.setEnabled(false);
           wrapper.name = "car-template-" + val;
           loadedCarMeshes[val] = wrapper;
@@ -334,7 +334,7 @@
       rocketParticleTimer: 0,
       jumpVelocity: 0,
       isJumping: false,
-      playerY: 0.5
+      playerY: 1.0
     };
 
     let scene;
@@ -670,7 +670,7 @@ function getTrackKind(segmentIndex) {
 
     function createPlayer(scene) {
       playerBall = new BABYLON.TransformNode("player-root", scene);
-      playerBall.position = new BABYLON.Vector3(0, 0.5, 0);
+      playerBall.position = new BABYLON.Vector3(0, 1.0, 0);
 
       state.playerCarMesh = createCarInstance(state.playerValue, scene);
       if (state.playerCarMesh) {
@@ -877,7 +877,7 @@ function getTrackKind(segmentIndex) {
       state.rocketParticleTimer = 0;
       state.jumpVelocity = 0;
       state.isJumping = false;
-      state.playerY = 0.5;
+      state.playerY = 1.0;
 
       state.collectibles.forEach((item) => disposeEntity(item));
       state.gates.forEach((item) => disposeThorn(item));
@@ -1140,8 +1140,8 @@ function getTrackKind(segmentIndex) {
       if (state.isJumping) {
         state.jumpVelocity -= 20 * delta;
         state.playerY += state.jumpVelocity * delta;
-        if (state.playerY <= 0.5) {
-          state.playerY = 0.5;
+        if (state.playerY <= 1.0) {
+          state.playerY = 1.0;
           state.isJumping = false;
           state.jumpVelocity = 0;
         }
@@ -1504,7 +1504,7 @@ function checkForFall() {
         } else {
           item.vx *= Math.exp(-2 * delta);
           item.vz *= Math.exp(-2 * delta);
-          item.mesh.position.y = 0.5 + Math.abs(Math.sin(performance.now() * 0.005 + item.value)) * 0.3;
+          item.mesh.position.y = 1.0 + Math.abs(Math.sin(performance.now() * 0.005 + item.value)) * 0.3;
           item.mesh.rotation.x += delta * (state.speed * 0.6 * 0.4);
         }
 
