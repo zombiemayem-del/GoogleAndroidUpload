@@ -1,0 +1,1860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Merge Run: 2048 Ball</title>
+  <style>
+    :root {
+      --bg-top: #87ceeb;
+      --bg-bottom: #98fb98;
+      --panel: rgba(10, 10, 30, 0.92);
+      --panel-border: rgba(0, 240, 255, 0.3);
+      --text: #e0e8ff;
+      --accent: #00f0ff;
+      --accent-2: #aa00ff;
+      --danger: #ff0044;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      font-family: "Yu Gothic UI", "Meiryo", "Trebuchet MS", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top, rgba(255, 255, 255, 0.5), transparent 40%),
+        linear-gradient(180deg, var(--bg-top), var(--bg-bottom));
+    }
+
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+
+    #renderCanvas {
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      display: block;
+    }
+
+    .hud {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .score-display {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      font-size: 42px;
+      font-weight: 800;
+      color: #ffffff;
+      -webkit-text-stroke: 2px #000000;
+      text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+    }
+
+
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: transparent;
+      pointer-events: auto;
+    }
+
+    .overlay.dimmed {
+      background: rgba(5, 5, 20, 0.5);
+    }
+
+    .overlay.hidden, .hidden {
+      display: none !important;
+    }
+
+    .panel {
+      width: min(440px, 100%);
+      padding: 32px;
+      border-radius: 28px;
+      background: rgba(10, 10, 40, 0.95);
+      box-shadow: 0 0 30px rgba(0,240,255,0.2), 0 24px 60px rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(0,240,255,0.25);
+      text-align: center;
+      font-family: "Segoe UI", "SF Pro Display", "Helvetica Neue", sans-serif;
+    }
+
+    .panel .multiplier {
+      font-size: 48px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #00f0ff, #aa00ff);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      filter: drop-shadow(0 0 10px rgba(0,240,255,0.5));
+      margin: 0 0 12px;
+    }
+
+    .panel .final-score {
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--text);
+      opacity: 0.8;
+    }
+
+    .panel .final-score strong {
+      font-size: 32px;
+      color: #00f0ff;
+      -webkit-text-fill-color: #00f0ff;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(34px, 5vw, 54px);
+      line-height: 0.95;
+    }
+
+    .subtitle {
+      margin: 0 0 16px;
+      font-size: 16px;
+      opacity: 0.82;
+    }
+
+    .pill-row {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin: 18px 0 24px;
+    }
+
+    .pill {
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(0, 194, 255, 0.16);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    button {
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 22px;
+      font-size: 16px;
+      font-weight: 700;
+      color: white;
+      background: linear-gradient(135deg, var(--accent), #ff9f1a);
+      cursor: pointer;
+      box-shadow: 0 14px 30px rgba(255, 127, 80, 0.32);
+    }
+
+    button:hover {
+      filter: brightness(1.04);
+    }
+
+    .danger {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    @media (max-width: 720px) {
+      .top-bar {
+        padding: 12px;
+        gap: 10px;
+      }
+
+      .card {
+        min-width: 0;
+        flex: 1;
+      }
+
+      .instructions {
+        left: 12px;
+        right: 12px;
+        bottom: 12px;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="renderCanvas"></canvas>
+
+    <div class="hud">
+      <div class="score-display" id="scoreValue">0</div>
+    </div>
+
+    <div class="overlay hidden" id="overlay">
+      <div class="panel hidden" id="overlayPanel">
+        <p id="overlayMessage"></p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.babylonjs.com/babylon.js"></script>
+  <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
+  <script src="https://cdn.babylonjs.com/materialsLibrary/babylonjs.materials.min.js"></script>
+  <script>
+    if (!window.BABYLON) {
+      const overlayMessage = document.getElementById("overlayMessage");
+      overlayMessage.innerHTML = "Failed to load Babylon.js.";
+      throw new Error("Babylon.js failed to load.");
+    }
+
+    const canvas = document.getElementById("renderCanvas");
+    const engine = new BABYLON.Engine(canvas, true, { preserveDrawingBuffer: true, stencil: true });
+
+    const scoreValue = document.getElementById("scoreValue");
+    const overlay = document.getElementById("overlay");
+    const overlayMessage = document.getElementById("overlayMessage");
+
+    const laneX = [-3.2, 0, 3.2];
+    const spawnColumns = [-4, 0, 4];
+    const cameraDefaults = {
+      alpha: -Math.PI / 2 + 0.15,
+      beta: 0.85,
+      radius: 17,
+      target: new BABYLON.Vector3(0, 2, 16)
+    };
+    const colorMap = {
+      2: "#ffeb3b",
+      4: "#ff9e80",
+      8: "#ff8a65",
+      16: "#a1887f",
+      32: "#ff7043",
+      64: "#f48fb1",
+      128: "#8d6e63",
+      256: "#212121",
+      512: "#ffa726",
+      1024: "#ff6e40",
+      2048: "#9e9e9e"
+    };
+
+    const carModels = {
+      2: "animal-chick.glb",
+      4: "animal-bunny.glb",
+      8: "animal-cat.glb",
+      16: "animal-dog.glb",
+      32: "animal-fox.glb",
+      64: "animal-pig.glb",
+      128: "animal-cow.glb",
+      256: "animal-panda.glb",
+      512: "animal-lion.glb",
+      1024: "animal-tiger.glb",
+      2048: "animal-elephant.glb"
+    };
+    const MODELS_PATH = "models/";
+    const loadedCarMeshes = {};
+
+    function preloadCarModels(scene) {
+      return Promise.all(Object.entries(carModels).map(([val, file]) => {
+        return BABYLON.SceneLoader.ImportMeshAsync("", MODELS_PATH, file, scene).then((result) => {
+          const wrapper = new BABYLON.TransformNode("car-wrapper-" + val, scene);
+          wrapper.rotation.y = 0;
+          const root = result.meshes[0];
+          root.parent = wrapper;
+          wrapper.setEnabled(false);
+          wrapper.name = "car-template-" + val;
+          loadedCarMeshes[val] = wrapper;
+        }).catch((err) => {
+          console.warn("Failed to load " + file, err);
+        });
+      }));
+    }
+
+    const carScaleMap = {
+      2: 0.5, 4: 0.55, 8: 0.6, 16: 0.65, 32: 0.7,
+      64: 0.75, 128: 0.85, 256: 0.95, 512: 1.0, 1024: 1.1, 2048: 1.2
+    };
+
+    function createCarInstance(value, scene) {
+      const template = loadedCarMeshes[value] || loadedCarMeshes[2];
+      if (!template) return null;
+      const clone = template.clone("car-" + Math.random());
+      clone.setEnabled(true);
+      clone.getChildMeshes().forEach((m) => m.setEnabled(true));
+      const s = ((carScaleMap[value] || 0.6) + 0.3) * 1.62;
+      clone.scaling = new BABYLON.Vector3(s, s, s);
+      clone.rotation.y = 0;
+      return clone;
+    }
+
+    const STAGE_LENGTH = 1560;
+    const RAMP_STEPS = 11;
+    const RAMP_MULTIPLIERS = [2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048];
+    const RAMP_COLORS = RAMP_MULTIPLIERS.map((v) => colorMap[v] || "#ffffff");
+
+    const state = {
+      running: false,
+      falling: false,
+      fallVelocity: 0,
+      score: 0,
+      bestBall: 2,
+      playerValue: 2,
+      targetX: 0,
+      inputLeft: false,
+      inputRight: false,
+      speed: 13,
+      distance: 0,
+      nextSpawnZ: 22,
+      spawnId: 0,
+      collectibles: [],
+      gates: [],
+      roadTiles: [],
+      waterTiles: [],
+      trackCursor: 0,
+      pendingFallReason: "",
+      touchStartX: null,
+      touchStartTargetX: 0,
+      phase: "running",
+      rampMeshes: [],
+      rampLabels: [],
+      finishZ: 0,
+      rampSpeed: 0,
+      rampProgress: 0,
+      rampCurrentStep: -1,
+      rampVisible: false,
+      sceneryMeshes: [],
+      nextSpawnZ: 35,
+      rocketMode: false,
+      rocketParticleTimer: 0
+    };
+
+    let scene;
+    let playerBall;
+    let playerLabelPlane;
+    let playerLabelTexture;
+
+function color3FromHex(hex) {
+      return BABYLON.Color3.FromHexString(hex);
+    }
+
+function getTrackKind(segmentIndex) {
+      return "stone";
+    }
+
+    function createTrackTile(scene, segmentIndex) {
+      const root = new BABYLON.TransformNode("track-root-" + segmentIndex, scene);
+
+      const surface = BABYLON.MeshBuilder.CreateBox("track-surface-" + segmentIndex, { width: 12, depth: 18, height: 0.7 }, scene);
+      surface.parent = root;
+
+      const dashMat = createColorMaterial(scene, "#d7ccc8");
+      dashMat.roughness = 0.9;
+      for (const laneX of [-2, 2]) {
+        for (let d = 0; d < 5; d++) {
+          const dash = BABYLON.MeshBuilder.CreateBox("dash-" + segmentIndex + "-" + laneX + "-" + d, { width: 0.15, depth: 2, height: 0.02 }, scene);
+          dash.parent = root;
+          dash.position = new BABYLON.Vector3(laneX, 0.36, -7.2 + d * 4.5);
+          dash.material = dashMat;
+        }
+      }
+
+      const leftRope = BABYLON.MeshBuilder.CreateCylinder("track-left-rope-" + segmentIndex, { height: 18, diameter: 0.1, tessellation: 10 }, scene);
+      leftRope.parent = root;
+      leftRope.rotation.x = Math.PI / 2;
+
+      const rightRope = BABYLON.MeshBuilder.CreateCylinder("track-right-rope-" + segmentIndex, { height: 18, diameter: 0.1, tessellation: 10 }, scene);
+      rightRope.parent = root;
+      rightRope.rotation.x = Math.PI / 2;
+
+      const planks = [];
+      for (let i = 0; i < 6; i += 1) {
+        const plank = BABYLON.MeshBuilder.CreateBox("track-plank-" + segmentIndex + "-" + i, { width: 4.6, depth: 2.6, height: 0.18 }, scene);
+        plank.parent = root;
+        plank.position.z = -7.2 + i * 2.9;
+        plank.position.y = 0.12;
+        planks.push(plank);
+      }
+
+      const posts = [];
+      for (let i = 0; i < 4; i += 1) {
+        [-1, 1].forEach((side) => {
+          const post = BABYLON.MeshBuilder.CreateCylinder("track-post-" + segmentIndex + "-" + i + "-" + side, { height: 2.4, diameter: 0.16, tessellation: 10 }, scene);
+          post.parent = root;
+          post.position = new BABYLON.Vector3(side * 2.85, 1.05, -6 + i * 4);
+          posts.push(post);
+        });
+      }
+
+      const supports = [];
+      for (let i = 0; i < 3; i += 1) {
+        const support = BABYLON.MeshBuilder.CreateCylinder("track-support-" + segmentIndex + "-" + i, { height: 5.2, diameter: 0.45, tessellation: 12 }, scene);
+        support.parent = root;
+        support.position = new BABYLON.Vector3(0, -2.55, -6 + i * 6);
+        supports.push(support);
+      }
+
+      const borderLeft = BABYLON.MeshBuilder.CreateBox("border-left-" + segmentIndex, { width: 0.3, depth: 18, height: 0.6 }, scene);
+      borderLeft.parent = root;
+      borderLeft.position = new BABYLON.Vector3(-6.15, 0.3, 0);
+      const borderRight = BABYLON.MeshBuilder.CreateBox("border-right-" + segmentIndex, { width: 0.3, depth: 18, height: 0.6 }, scene);
+      borderRight.parent = root;
+      borderRight.position = new BABYLON.Vector3(6.15, 0.3, 0);
+      const borderMat = createColorMaterial(scene, "#8d6e63");
+      borderMat.roughness = 0.7;
+      borderLeft.material = borderMat;
+      borderRight.material = borderMat;
+
+      const tile = {
+        root,
+        surface,
+        borderLeft,
+        borderRight,
+        leftRope,
+        rightRope,
+        planks,
+        posts,
+        supports,
+        width: 12,
+        kind: "stone"
+      };
+
+      configureTrackTile(tile, segmentIndex, scene);
+      return tile;
+    }
+
+    function configureTrackTile(tile, segmentIndex, sceneRef) {
+      const kind = getTrackKind(segmentIndex);
+      const stone = kind === "stone";
+      const width = stone ? 12 : 6;
+
+      tile.kind = kind;
+      tile.width = width;
+      tile.root.metadata = { width, kind };
+
+      tile.surface.scaling.x = width / 12;
+      tile.surface.position.y = stone ? -0.1 : 0;
+      tile.surface.position.x = 0;
+      tile.surface.material = createColorMaterial(sceneRef, stone ? "#8BC34A" : "#9CCC65");
+      tile.surface.material.roughness = stone ? 0.92 : 0.72;
+      tile.surface.material.metallic = stone ? 0.08 : 0.04;
+
+      tile.supports.forEach((support, index) => {
+        support.isVisible = true;
+        support.position.x = stone ? (index - 1) * 2.8 : 0;
+        support.material = createColorMaterial(sceneRef, stone ? "#2a2a3e" : "#3d2b79");
+        support.material.roughness = 0.95;
+      });
+
+      tile.leftRope.isVisible = false;
+      tile.rightRope.isVisible = false;
+
+      tile.planks.forEach((plank, plankIndex) => {
+        plank.isVisible = !stone;
+        plank.position.y = 0.1 + (plankIndex % 2) * 0.02;
+        if (!stone) {
+          plank.material = createColorMaterial(sceneRef, plankIndex % 2 === 0 ? "#3d1b8e" : "#2d1570");
+          plank.material.roughness = 0.78;
+        }
+      });
+
+      tile.posts.forEach((post) => {
+        post.isVisible = false;
+      });
+
+      tile.borderLeft.isVisible = stone;
+      tile.borderRight.isVisible = stone;
+      if (stone) {
+        tile.borderLeft.position.x = -(width / 2 + 0.15);
+        tile.borderRight.position.x = (width / 2 + 0.15);
+      }
+    }
+
+    function getTrackTileAtZ(z) {
+      let closest = state.roadTiles[0];
+      let minDistance = Number.POSITIVE_INFINITY;
+      state.roadTiles.forEach((tile) => {
+        const distance = Math.abs(tile.root.position.z - z);
+        if (distance < minDistance) {
+          minDistance = distance;
+          closest = tile;
+        }
+      });
+      return closest;
+    }
+
+    function getAllowedLanesForZ(z) {
+      const tile = getTrackTileAtZ(z);
+      return tile && tile.kind === "bridge" ? [1] : [0, 1, 2];
+    }
+
+    function getPlayerHorizontalLimit() {
+      const activeTile = getTrackTileAtZ(0);
+      const playerRadius = 1.0;
+      return Math.max(1.5, ((activeTile ? activeTile.width : 12) * 0.5) - playerRadius * 0.2);
+    }
+
+    function clampTargetX(value) {
+      return BABYLON.Scalar.Clamp(value, -getPlayerHorizontalLimit(), getPlayerHorizontalLimit());
+    }
+
+    function resetCamera() {
+      const camera = scene && scene.activeCamera;
+      if (!camera) {
+        return;
+      }
+
+      const t = cameraDefaults.target.clone();
+      camera.setTarget(t);
+      camera.alpha = cameraDefaults.alpha;
+      camera.beta = cameraDefaults.beta;
+      camera.radius = cameraDefaults.radius;
+      camera.update();
+    }
+
+    function createScene() {
+      const scene = new BABYLON.Scene(engine);
+      scene.clearColor = new BABYLON.Color4(0.55, 0.85, 1.0, 1);
+      scene.environmentTexture = BABYLON.CubeTexture.CreateFromPrefilteredData("https://assets.babylonjs.com/environments/environmentSpecular.env", scene);
+      scene.imageProcessingConfiguration.contrast = 1.0;
+      scene.imageProcessingConfiguration.exposure = 1.0;
+
+
+      const camera = new BABYLON.ArcRotateCamera(
+        "camera",
+        cameraDefaults.alpha,
+        cameraDefaults.beta,
+        cameraDefaults.radius,
+        cameraDefaults.target.clone(),
+        scene
+      );
+      camera.lowerRadiusLimit = 15;
+      camera.upperRadiusLimit = 80;
+      camera.wheelPrecision = 50;
+      camera.inputs.clear();
+
+      const hemispheric = new BABYLON.HemisphericLight("hemi", new BABYLON.Vector3(0, 1, 0), scene);
+      hemispheric.intensity = 0.85;
+      hemispheric.diffuse = new BABYLON.Color3(1, 1, 1);
+      hemispheric.groundColor = new BABYLON.Color3(0.3, 0.3, 0.3);
+
+      const dirLight = new BABYLON.DirectionalLight("sun", new BABYLON.Vector3(-0.4, -1, 0.3), scene);
+      dirLight.position = new BABYLON.Vector3(10, 18, -6);
+      dirLight.intensity = 0.8;
+      dirLight.diffuse = new BABYLON.Color3(1, 0.95, 0.9);
+
+      const neonLight = new BABYLON.PointLight("neonLight", new BABYLON.Vector3(0, 5, -3), scene);
+      neonLight.diffuse = new BABYLON.Color3(0, 0.9, 1);
+      neonLight.intensity = 0.6;
+      neonLight.range = 30;
+
+      const sky = BABYLON.MeshBuilder.CreateSphere("sky", { diameter: 180, sideOrientation: BABYLON.Mesh.BACKSIDE }, scene);
+      const skyMat = BABYLON.SkyMaterial
+        ? new BABYLON.SkyMaterial("skyMat", scene)
+        : new BABYLON.StandardMaterial("skyMat", scene);
+      if (skyMat instanceof BABYLON.StandardMaterial) {
+        skyMat.disableLighting = true;
+        skyMat.emissiveColor = new BABYLON.Color3(0.55, 0.85, 1.0);
+      } else {
+        skyMat.backFaceCulling = false;
+        skyMat.luminance = 0.01;
+        skyMat.turbidity = 0.5;
+        skyMat.rayleigh = 0.2;
+        skyMat.inclination = -0.5;
+        skyMat.azimuth = 0.25;
+      }
+      sky.material = skyMat;
+
+
+      state.roadTiles = [];
+      for (let i = 0; i < 8; i += 1) {
+        const tile = createTrackTile(scene, i);
+        tile.root.position.z = i * 18;
+        state.roadTiles.push(tile);
+      }
+      state.trackCursor = state.roadTiles.length;
+
+      const waterMat = new BABYLON.PBRMetallicRoughnessMaterial("waterMat", scene);
+      waterMat.baseColor = new BABYLON.Color3(0.02, 0.08, 0.2);
+      waterMat.emissiveColor = new BABYLON.Color3(0.02, 0.06, 0.18);
+      waterMat.metallic = 0.7;
+      waterMat.roughness = 0.1;
+      waterMat.alpha = 0.95;
+      waterMat.environmentTexture = scene.environmentTexture;
+      state.waterTiles = [];
+      for (let i = 0; i < 4; i++) {
+        const water = BABYLON.MeshBuilder.CreateGround("water-" + i, { width: 60, height: 42, subdivisions: 16 }, scene);
+        water.position.y = -3.5;
+        water.position.z = i * 40;
+        water.material = waterMat;
+        state.waterTiles.push(water);
+      }
+
+
+      const floorMat = createColorMaterial(scene, "#66BB6A");
+      floorMat.roughness = 0.95;
+      state.floorTiles = [];
+      for (let i = -2; i < 12; i++) {
+        const floor = BABYLON.MeshBuilder.CreateGround("floor-" + i, { width: 120, height: 60 }, scene);
+        floor.position.y = -0.35;
+        floor.position.z = i * 60;
+        floor.material = floorMat;
+        state.floorTiles.push(floor);
+      }
+
+      createPlayer(scene);
+      loadCityScenery(scene);
+      return scene;
+    }
+
+    function loadCityScenery(sceneRef) {
+      const buildingFiles = ["building-type-c.glb","building-type-d.glb","building-type-e.glb","building-type-f.glb","building-type-a.glb","building-type-b.glb"];
+      const treeFiles = ["tree-large.glb","tree-small.glb"];
+
+      state.sceneryMeshes = [];
+
+      const allFiles = [...buildingFiles, ...treeFiles];
+      const templates = {};
+
+      Promise.all(allFiles.map((file) =>
+        BABYLON.SceneLoader.ImportMeshAsync("", MODELS_PATH, file, sceneRef).then((result) => {
+          const root = result.meshes[0];
+          root.setEnabled(false);
+          templates[file] = root;
+        }).catch(() => {})
+      )).then(() => {
+        for (let z = 0; z < STAGE_LENGTH * 1.2; z += 4 + Math.random() * 3) {
+          for (const side of [-1, 1]) {
+            const x = side * (9 + Math.random() * 4);
+            const isTree = Math.random() < 0.4;
+            const file = isTree
+              ? treeFiles[Math.floor(Math.random() * treeFiles.length)]
+              : buildingFiles[Math.floor(Math.random() * buildingFiles.length)];
+            const tmpl = templates[file];
+            if (!tmpl) continue;
+            const clone = tmpl.clone("scenery-" + Math.random());
+            clone.setEnabled(true);
+            clone.getChildMeshes().forEach((m) => m.setEnabled(true));
+            const s = isTree ? 9 + Math.random() * 6 : 3.6 + Math.random() * 2.4;
+            clone.scaling = new BABYLON.Vector3(s, s, s);
+            clone.position = new BABYLON.Vector3(x, 0, z);
+            clone.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;
+            state.sceneryMeshes.push(clone);
+          }
+
+          if (Math.random() < 0.3) {
+            const treeFile = treeFiles[Math.floor(Math.random() * treeFiles.length)];
+            const treeTmpl = templates[treeFile];
+            if (treeTmpl) {
+              const extraTree = treeTmpl.clone("extra-tree-" + Math.random());
+              extraTree.setEnabled(true);
+              extraTree.getChildMeshes().forEach((m) => m.setEnabled(true));
+              const ts = 7 + Math.random() * 5;
+              extraTree.scaling = new BABYLON.Vector3(ts, ts, ts);
+              const extraSide = Math.random() > 0.5 ? 1 : -1;
+              extraTree.position = new BABYLON.Vector3(extraSide * (16 + Math.random() * 6), 0, z + Math.random() * 4);
+              state.sceneryMeshes.push(extraTree);
+            }
+          }
+        }
+      });
+    }
+
+    function createPlayer(scene) {
+      playerBall = new BABYLON.TransformNode("player-root", scene);
+      playerBall.position = new BABYLON.Vector3(0, 0, 0);
+
+      state.playerCarMesh = createCarInstance(state.playerValue, scene);
+      if (state.playerCarMesh) {
+        state.playerCarMesh.parent = playerBall;
+        state.playerCarMesh.position = BABYLON.Vector3.Zero();
+      }
+
+      const label = buildLabel(scene, state.playerValue);
+      playerLabelPlane = label.plane;
+      playerLabelTexture = label.texture;
+      playerLabelPlane.parent = playerBall;
+      const pCarS = (carScaleMap[state.playerValue] || 0.6) + 0.3;
+      playerLabelPlane.position = new BABYLON.Vector3(0, pCarS * 2.5 + 0.8, 0);
+      playerLabelPlane.rotation.x = Math.PI / 2;
+      playerLabelPlane.rotation.y = 0;
+      playerLabelPlane.rotation.z = 0;
+      playerLabelPlane.scaling = new BABYLON.Vector3(3, 3, 3);
+    }
+
+    function buildLabel(scene, value, texSize) {
+      const sz = texSize || 256;
+      const texture = new BABYLON.DynamicTexture("label-" + Math.random(), { width: sz, height: sz }, scene, true);
+      const plane = BABYLON.MeshBuilder.CreatePlane("label-plane-" + Math.random(), { size: 1.05, sideOrientation: BABYLON.Mesh.DOUBLESIDE }, scene);
+      const material = new BABYLON.StandardMaterial("label-mat-" + Math.random(), scene);
+      material.diffuseTexture = texture;
+      material.emissiveColor = BABYLON.Color3.White();
+      material.opacityTexture = texture;
+      material.specularColor = BABYLON.Color3.Black();
+      material.backFaceCulling = false;
+      plane.material = material;
+      plane.rotation.y = 0;
+      drawLabel(texture, value, "#172038");
+      return { plane, texture };
+    }
+
+    function drawLabel(texture, text, color) {
+      const size = texture.getSize();
+      const context = texture.getContext();
+      context.clearRect(0, 0, size.width, size.height);
+      const len = String(text).length;
+      const fontSize = len > 3 ? 70 : (len > 2 ? 90 : 120);
+      context.font = "bold " + fontSize + "px Trebuchet MS";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.lineWidth = 8;
+      context.strokeStyle = "#000000";
+      context.strokeText(String(text), size.width / 2, size.height / 2);
+      context.fillStyle = "#ffffff";
+      context.fillText(String(text), size.width / 2, size.height / 2);
+      texture.update();
+    }
+
+    function drawLabelOutlined(texture, text) {
+      const size = texture.getSize();
+      const context = texture.getContext();
+      context.clearRect(0, 0, size.width, size.height);
+      const baseSize = size.width > 300 ? 240 : 100;
+      const fontSize = String(text).length > 5 ? baseSize * 0.7 : (String(text).length > 4 ? baseSize * 0.8 : baseSize);
+      context.font = "bold " + fontSize + "px Trebuchet MS";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.lineWidth = Math.round(fontSize * 0.12);
+      context.strokeStyle = "#000000";
+      context.strokeText(String(text), size.width / 2, size.height / 2);
+      context.fillStyle = "#ffffff";
+      context.fillText(String(text), size.width / 2, size.height / 2);
+      texture.update();
+    }
+
+    function drawLabelFlipped(texture, text, color) {
+      const size = texture.getSize();
+      const context = texture.getContext();
+      context.clearRect(0, 0, size.width, size.height);
+      context.save();
+      context.translate(size.width / 2, size.height / 2);
+      context.scale(-1, 1);
+      context.font = "bold 120px Trebuchet MS";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillStyle = color;
+      context.fillText(String(text), 0, 0);
+      context.restore();
+      texture.update();
+    }
+
+    function createColorMaterial(scene, hex) {
+      const mat = new BABYLON.PBRMetallicRoughnessMaterial("mat-" + hex + "-" + Math.random(), scene);
+      mat.baseColor = color3FromHex(hex);
+      mat.metallic = 0.25;
+      mat.roughness = 0.45;
+      mat.environmentTexture = scene.environmentTexture;
+      return mat;
+    }
+
+    function createValueMaterial(scene, value) {
+      const hex = colorMap[value] || "#ffffff";
+      const color = color3FromHex(hex);
+      const mat = new BABYLON.PBRMetallicRoughnessMaterial("value-mat-" + value + "-" + Math.random(), scene);
+      mat.baseColor = color;
+      mat.metallic = 0.15;
+      mat.roughness = 0.2;
+      mat.environmentTexture = scene.environmentTexture;
+      mat.emissiveColor = color.scale(0.15);
+      return mat;
+    }
+
+    function getCollectibleScale(value) {
+      return 1 + Math.max(0, Math.log2(value / 2)) * 0.045;
+    }
+
+    function createFinishRamp(sceneRef) {
+      state.rampMeshes.forEach((m) => { if (m && !m.isDisposed()) m.dispose(); });
+      state.rampLabels.forEach((m) => { if (m && !m.isDisposed()) m.dispose(); });
+      state.rampMeshes = [];
+      state.rampLabels = [];
+
+      const stepDepth = 4;
+      const stepWidth = 10;
+
+      for (let i = 0; i < RAMP_STEPS; i++) {
+        const stepHeight = 1.2 + i * 0.8;
+        const step = BABYLON.MeshBuilder.CreateBox("ramp-step-" + i, {
+          width: stepWidth,
+          height: stepHeight,
+          depth: stepDepth
+        }, sceneRef);
+        step.position = new BABYLON.Vector3(0, stepHeight / 2, i * stepDepth);
+        step.material = createColorMaterial(sceneRef, RAMP_COLORS[i]);
+        step.material.roughness = 0.6;
+        state.rampMeshes.push(step);
+
+        const labelLeft = buildLabel(sceneRef, "x" + RAMP_MULTIPLIERS[i], 512);
+        labelLeft.plane.scaling = new BABYLON.Vector3(1.8, 1.8, 1.8);
+        labelLeft.plane.position = new BABYLON.Vector3(-stepWidth / 2 + 1.5, stepHeight + 0.01, i * stepDepth);
+        labelLeft.plane.rotation.x = Math.PI / 2;
+        labelLeft.plane.rotation.y = 0;
+        labelLeft.plane.rotation.z = 0;
+        labelLeft.plane.scaling = new BABYLON.Vector3(1.8, 1.8, 1.8);
+        drawLabelOutlined(labelLeft.texture, "x" + RAMP_MULTIPLIERS[i]);
+
+        const labelRight = buildLabel(sceneRef, "x" + RAMP_MULTIPLIERS[i], 512);
+        labelRight.plane.position = new BABYLON.Vector3(stepWidth / 2 - 1.5, stepHeight + 0.01, i * stepDepth);
+        labelRight.plane.rotation.x = Math.PI / 2;
+        labelRight.plane.rotation.y = 0;
+        labelRight.plane.rotation.z = 0;
+        labelRight.plane.scaling = new BABYLON.Vector3(1.8, 1.8, 1.8);
+        drawLabelOutlined(labelRight.texture, "x" + RAMP_MULTIPLIERS[i]);
+        drawLabelOutlined(labelRight.texture, "x" + RAMP_MULTIPLIERS[i]);
+
+        state.rampLabels.push(labelLeft.plane, labelRight.plane);
+      }
+    }
+
+    function setRampVisible(visible) {
+      state.rampMeshes.forEach((m) => { m.setEnabled(visible); });
+      state.rampLabels.forEach((m) => { m.setEnabled(visible); });
+    }
+
+    function positionRamp(baseZ) {
+      const stepDepth = 4;
+      for (let i = 0; i < state.rampMeshes.length; i++) {
+        const stepHeight = 1.2 + i * 0.8;
+        state.rampMeshes[i].position.z = baseZ + i * stepDepth;
+        state.rampMeshes[i].position.y = stepHeight / 2;
+      }
+      for (let i = 0; i < state.rampLabels.length; i++) {
+        const stepIdx = Math.floor(i / 2);
+        const stepHeight = 1.2 + stepIdx * 0.8;
+        state.rampLabels[i].position.z = baseZ + stepIdx * 4;
+        state.rampLabels[i].position.y = stepHeight + 0.01;
+      }
+    }
+
+    function getRampMultiplier(ballZ, rampBaseZ) {
+      const stepDepth = 4;
+      const stepIndex = Math.floor((ballZ - rampBaseZ + stepDepth / 2) / stepDepth);
+      const clamped = Math.max(0, Math.min(RAMP_STEPS - 1, stepIndex));
+      return { index: clamped, multiplier: RAMP_MULTIPLIERS[clamped] };
+    }
+
+    function resetGame() {
+      if (state.resetTimer) { clearTimeout(state.resetTimer); state.resetTimer = null; }
+      state.falling = false;
+      state.fallVelocity = 0;
+      state.score = 0;
+      state.playerValue = 2;
+      state.bestBall = 2;
+      state.targetX = 0;
+      state.inputLeft = false;
+      state.inputRight = false;
+      state.speed = 11;
+      state.distance = 0;
+      state.nextSpawnZ = 22;
+      state.spawnId = 0;
+      state.running = true;
+      state.phase = "running";
+      state.rampSpeed = 0;
+      state.finishZ = 0;
+      state.rampProgress = 0;
+      state.rampCurrentStep = -1;
+      state.rampVisible = false;
+      state.nextSpawnZ = 35;
+      state.rocketMode = false;
+      state.rocketParticleTimer = 0;
+
+      state.collectibles.forEach((item) => disposeEntity(item));
+      state.gates.forEach((item) => disposeThorn(item));
+      state.collectibles = [];
+      state.gates = [];
+
+      createFinishRamp(scene);
+      setRampVisible(false);
+
+      playerBall.position.x = 0;
+      playerBall.position.y = 1;
+      playerBall.position.z = 0;
+      playerBall.rotationQuaternion = null;
+      playerBall.rotation.x = 0;
+      playerBall.rotation.y = 0;
+      playerBall.rotation.z = 0;
+      updatePlayerVisuals();
+      resetCamera();
+
+      state.roadTiles.forEach((tile, index) => {
+        tile.root.position.z = index * 18;
+        configureTrackTile(tile, index, scene);
+      });
+      state.trackCursor = state.roadTiles.length;
+
+      spawnAllEntities();
+
+      overlay.classList.add("hidden");
+      overlay.classList.remove("dimmed");
+      document.getElementById("overlayPanel").classList.add("hidden");
+    }
+
+    function updatePlayerVisuals() {
+      if (state.playerCarMesh) {
+        state.playerCarMesh.dispose();
+      }
+      state.playerCarMesh = createCarInstance(state.playerValue, scene);
+      if (state.playerCarMesh) {
+        state.playerCarMesh.parent = playerBall;
+        state.playerCarMesh.position = BABYLON.Vector3.Zero();
+      }
+      drawLabel(playerLabelTexture, state.playerValue, "#172038");
+      const upCarS = (carScaleMap[state.playerValue] || 0.6) + 0.3;
+      playerLabelPlane.position = new BABYLON.Vector3(0, upCarS * 2.5 + 0.8, 0);
+      scoreValue.textContent = String(state.score);
+    }
+
+    function disposeEntity(item) {
+      if (item.carMesh && !item.carMesh.isDisposed()) {
+        item.carMesh.getChildMeshes().forEach((m) => m.dispose());
+        item.carMesh.dispose();
+      }
+      if (item.mesh && !item.mesh.isDisposed()) {
+        item.mesh.getChildMeshes && item.mesh.getChildMeshes().forEach((m) => m.dispose());
+        item.mesh.dispose();
+      }
+      if (item.labelPlane && !item.labelPlane.isDisposed()) {
+        item.labelPlane.dispose();
+      }
+    }
+
+    function spawnAllEntities() {
+      spawnCollectible(1, 15, 2);
+      spawnCollectible(1, 22, 2);
+      spawnCollectible(0, 28, 4);
+      state.nextSpawnZ = 35;
+    }
+
+    function fillTrack() {
+      while (state.nextSpawnZ < state.distance + 60 && state.nextSpawnZ < STAGE_LENGTH * 0.92) {
+        if (Math.random() > 0.85) {
+          spawnThorn(0, state.nextSpawnZ);
+        } else {
+          const count = Math.random() < 0.3 ? 1 : (Math.random() < 0.6 ? 2 : 3);
+          for (let c = 0; c < count; c++) {
+            const playerPow = Math.max(1, Math.floor(Math.log2(Math.max(2, state.playerValue))));
+            const roll = Math.random();
+            let pow;
+            if (roll < 0.60) {
+              pow = playerPow;
+            } else if (roll < 0.80) {
+              pow = playerPow + 1 + Math.floor(Math.random() * Math.min(3, 11 - playerPow));
+            } else {
+              pow = Math.max(1, playerPow - 1 - Math.floor(Math.random() * 2));
+            }
+            pow = Math.max(1, Math.min(11, pow));
+            const value = Math.pow(2, pow);
+            const zOffset = (Math.random() - 0.5) * 3;
+            spawnCollectible(0, state.nextSpawnZ + zOffset, value);
+          }
+        }
+        state.nextSpawnZ += 5 + Math.random() * 6;
+      }
+    }
+
+    function spawnCollectible(laneIndex, z, value, forceX) {
+      const root = new BABYLON.TransformNode("pickup-root-" + state.spawnId++, scene);
+      let col;
+      if (forceX !== undefined) {
+        col = forceX;
+      } else {
+        const segIdx = Math.round(z / 18);
+        const onBridge = getTrackKind(segIdx) === "bridge";
+        const cols = onBridge ? [0] : spawnColumns;
+        col = cols[Math.floor(Math.random() * cols.length)];
+      }
+      root.position = new BABYLON.Vector3(col, 0, z);
+
+      const carMesh = createCarInstance(value, scene);
+      if (carMesh) {
+        carMesh.parent = root;
+        carMesh.position = BABYLON.Vector3.Zero();
+      }
+
+      const label = buildLabel(scene, value);
+      label.plane.parent = root;
+      const carS = (carScaleMap[value] || 0.6) + 0.3;
+      const labelY = carS * 2.5 + 0.8;
+      label.plane.position = new BABYLON.Vector3(0, labelY, 0);
+      label.plane.rotation.x = Math.PI / 2;
+      label.plane.rotation.y = 0;
+      label.plane.rotation.z = 0;
+      label.plane.scaling = new BABYLON.Vector3(3, 3, 3);
+
+      const collectible = {
+        lane: laneIndex,
+        value,
+        mesh: root,
+        carMesh: carMesh,
+        labelPlane: label.plane,
+        radius: 1.0
+      };
+
+      state.collectibles.push(collectible);
+    }
+
+    function spawnThorn(laneIndex, z) {
+      const root = new BABYLON.TransformNode("barrier-root-" + state.spawnId, scene);
+
+      const orangeMat = createColorMaterial(scene, "#ff6600");
+      orangeMat.roughness = 0.6;
+      const whiteMat = createColorMaterial(scene, "#ffffff");
+      whiteMat.roughness = 0.6;
+      const redMat = createColorMaterial(scene, "#dd0000");
+      redMat.roughness = 0.5;
+
+      const post1 = BABYLON.MeshBuilder.CreateCylinder("bp1-" + state.spawnId, { height: 3.5, diameter: 0.2 }, scene);
+      post1.parent = root; post1.position = new BABYLON.Vector3(-1, 1.75, 0); post1.material = orangeMat;
+      const post2 = BABYLON.MeshBuilder.CreateCylinder("bp2-" + state.spawnId, { height: 3.5, diameter: 0.2 }, scene);
+      post2.parent = root; post2.position = new BABYLON.Vector3(1, 1.75, 0); post2.material = orangeMat;
+
+      const bar1 = BABYLON.MeshBuilder.CreateBox("bbar1-" + state.spawnId, { width: 2.5, height: 0.3, depth: 0.1 }, scene);
+      bar1.parent = root; bar1.position.y = 3.0; bar1.material = whiteMat;
+      const bar2 = BABYLON.MeshBuilder.CreateBox("bbar2-" + state.spawnId, { width: 2.5, height: 0.3, depth: 0.1 }, scene);
+      bar2.parent = root; bar2.position.y = 2.2; bar2.material = orangeMat;
+      const bar3 = BABYLON.MeshBuilder.CreateBox("bbar3-" + state.spawnId, { width: 2.5, height: 0.3, depth: 0.1 }, scene);
+      bar3.parent = root; bar3.position.y = 1.4; bar3.material = whiteMat;
+
+      const signBoard = BABYLON.MeshBuilder.CreateBox("bsign-" + state.spawnId, { width: 1.6, height: 1.6, depth: 0.08 }, scene);
+      signBoard.parent = root; signBoard.position.y = 4.2;
+      signBoard.rotation.y = Math.PI / 4;
+      const signMat = new BABYLON.StandardMaterial("sign-mat-" + state.spawnId, scene);
+      signMat.diffuseColor = new BABYLON.Color3(1, 0.85, 0);
+      signBoard.material = signMat;
+
+      const xBar1 = BABYLON.MeshBuilder.CreateBox("xbar1-" + state.spawnId, { width: 1.8, height: 0.2, depth: 0.12 }, scene);
+      xBar1.parent = signBoard; xBar1.rotation.z = Math.PI / 4; xBar1.material = redMat;
+      const xBar2 = BABYLON.MeshBuilder.CreateBox("xbar2-" + state.spawnId, { width: 1.8, height: 0.2, depth: 0.12 }, scene);
+      xBar2.parent = signBoard; xBar2.rotation.z = -Math.PI / 4; xBar2.material = redMat;
+
+      const light1 = BABYLON.MeshBuilder.CreateSphere("blight-" + state.spawnId, { diameter: 0.3 }, scene);
+      light1.parent = root; light1.position = new BABYLON.Vector3(-1, 3.6, 0);
+      const lightMat = new BABYLON.StandardMaterial("light-mat-" + state.spawnId, scene);
+      lightMat.emissiveColor = new BABYLON.Color3(1, 0.3, 0);
+      lightMat.diffuseColor = new BABYLON.Color3(1, 0.3, 0);
+      light1.material = lightMat;
+      const light2 = light1.clone("blight2-" + state.spawnId);
+      light2.parent = root; light2.position = new BABYLON.Vector3(1, 3.6, 0);
+      light2.material = lightMat;
+
+      const col = spawnColumns[Math.floor(Math.random() * spawnColumns.length)];
+      root.position = new BABYLON.Vector3(col, 0, z);
+
+      state.spawnId++;
+      state.gates.push({
+        lane: laneIndex,
+        mesh: root,
+        isThorn: true
+      });
+    }
+
+    function shuffle(array) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function moveLane(delta) {
+      if (!state.running) {
+        return;
+      }
+      state.targetX = clampTargetX(state.targetX + delta);
+    }
+
+    function endGame(reason) {
+      state.running = false;
+      overlay.classList.remove("hidden");
+      overlay.classList.add("dimmed");
+      document.getElementById("overlayPanel").classList.remove("hidden");
+      overlayMessage.innerHTML = "<div style='font-size:20px;font-weight:700;margin-bottom:12px;'>" + reason + "</div><div class='final-score'>Score <strong>" + state.score + "</strong></div>";
+    }
+
+    function update(delta) {
+      if (state.phase === "landed") {
+        state.landedTimer += delta;
+        const camera = scene.activeCamera;
+        camera.target.y = BABYLON.Scalar.Lerp(camera.target.y, playerBall.position.y + 2, Math.min(1, delta * 3));
+        camera.target.z = BABYLON.Scalar.Lerp(camera.target.z, playerBall.position.z + 3, Math.min(1, delta * 3));
+        if (state.landedTimer >= 1.5) {
+          finishRamp();
+        }
+        return;
+      }
+
+      if (state.phase === "ramp") {
+        updateRamp(delta);
+        return;
+      }
+
+      if (state.falling) {
+        updateFall(delta);
+        return;
+      }
+
+      if (!state.running) {
+        return;
+      }
+
+      const valuePowSpeed = Math.log2(Math.max(2, state.playerValue));
+      state.speed = 14 + valuePowSpeed * 1.5;
+      if (state.rocketMode) {
+        state.speed = Math.min(60, state.speed * 1.8 + delta * 2);
+      }
+      state.speed += delta * 0.05;
+      state.distance += state.speed * delta;
+      const horizontalInput = (state.inputRight ? 1 : 0) - (state.inputLeft ? 1 : 0);
+      if (horizontalInput !== 0) {
+        state.targetX = clampTargetX(state.targetX + horizontalInput * delta * 8.5);
+      } else {
+        state.targetX = clampTargetX(state.targetX);
+      }
+
+      playerBall.position.x = BABYLON.Scalar.Lerp(playerBall.position.x, state.targetX, Math.min(1, delta * 10));
+      playerBall.rotation.z = BABYLON.Scalar.Lerp(playerBall.rotation.z, (state.targetX - playerBall.position.x) * 0.06, Math.min(1, delta * 8));
+
+      playerBall.scaling.x = 1;
+      playerBall.scaling.y = 1;
+      playerBall.scaling.z = 1;
+
+      if (state.rocketMode) {
+        state.rocketParticleTimer += delta;
+        if (state.rocketParticleTimer > 0.02) {
+          state.rocketParticleTimer = 0;
+          for (let i = 0; i < 3; i++) {
+            const flame = BABYLON.MeshBuilder.CreateSphere("flame-" + Math.random(), { diameter: 0.3 + Math.random() * 0.4, segments: 4 }, scene);
+            flame.position = playerBall.position.clone();
+            flame.position.x += (Math.random() - 0.5) * 1.5;
+            flame.position.y += 0.3 + Math.random() * 0.5;
+            flame.position.z -= 1.5 + Math.random();
+            const flameMat = new BABYLON.StandardMaterial("flame-mat-" + Math.random(), scene);
+            const flameColors = ["#ff4400", "#ff8800", "#ffcc00", "#ff2200", "#ffffff"];
+            const fc = color3FromHex(flameColors[Math.floor(Math.random() * flameColors.length)]);
+            flameMat.emissiveColor = fc;
+            flameMat.diffuseColor = fc;
+            flame.material = flameMat;
+            let life = 0;
+            const obs = scene.onBeforeRenderObservable.add(() => {
+              const dt = scene.getEngine().getDeltaTime() / 1000;
+              life += dt;
+              flame.position.z -= state.speed * dt * 0.5;
+              flame.position.y += (Math.random() - 0.3) * dt * 3;
+              flame.position.x += (Math.random() - 0.5) * dt * 2;
+              const fade = Math.max(0, 1 - life / 0.4);
+              flame.scaling.x = fade;
+              flame.scaling.y = fade;
+              flame.scaling.z = fade;
+              if (life > 0.4) {
+                scene.onBeforeRenderObservable.remove(obs);
+                flame.dispose();
+              }
+            });
+          }
+        }
+
+        const shakeX = (Math.random() - 0.5) * 0.15;
+        playerBall.position.x += shakeX;
+
+      }
+
+      const camera = scene.activeCamera;
+      const valuePow = Math.log2(Math.max(2, state.playerValue));
+      const wantedRadius = cameraDefaults.radius + valuePow * 1.5;
+      camera.radius = BABYLON.Scalar.Lerp(camera.radius, wantedRadius, Math.min(1, delta * 0.5));
+      camera.target.x = BABYLON.Scalar.Lerp(camera.target.x, playerBall.position.x, Math.min(1, delta * 4));
+      camera.target.y = cameraDefaults.target.y;
+      camera.target.z = playerBall.position.z + 5;
+
+      recycleRoad(delta);
+      updateScenery(delta);
+      updateFloor(delta);
+      updateWater(delta);
+      updateCollectibles(delta);
+      processCollectibleInteractions();
+      updateGates(delta);
+      checkForFall();
+      fillTrack();
+
+      if (state.distance >= STAGE_LENGTH * 0.75 && !state.rampVisible) {
+        state.rampVisible = true;
+        state.finishZ = 80;
+        positionRamp(state.finishZ);
+        setRampVisible(true);
+      }
+
+      if (state.rampVisible && state.phase === "running") {
+        const scrollAmt = state.speed * delta;
+        state.finishZ -= scrollAmt;
+        for (let i = 0; i < state.rampMeshes.length; i++) {
+          state.rampMeshes[i].position.z -= scrollAmt;
+        }
+        for (let i = 0; i < state.rampLabels.length; i++) {
+          state.rampLabels[i].position.z -= scrollAmt;
+        }
+
+        if (state.finishZ <= 4) {
+          enterRamp();
+        }
+      }
+    }
+
+    function enterRamp() {
+      state.phase = "ramp";
+      state.targetX = 0;
+
+      state.collectibles.forEach((item) => disposeEntity(item));
+      state.collectibles = [];
+      state.gates.forEach((item) => disposeThorn(item));
+      state.gates = [];
+
+      const totalSteps = Math.floor(Math.log2(Math.max(2, state.playerValue)));
+      const STEP_FWD = 4;
+      const STEP_UP = 0.8;
+      const JUMP_DURATION = 0.35;
+
+      state.rampJumps = totalSteps;
+      state.rampCurrentJump = 0;
+      state.rampJumpTime = 0;
+      state.rampJumpDuration = JUMP_DURATION;
+      state.rampStepFwd = STEP_FWD;
+      state.rampStepUp = STEP_UP;
+      state.rampStartZ = playerBall.position.z;
+      state.rampStartY = playerBall.position.y;
+      state.rampBaseZ = state.finishZ;
+    }
+
+    function updateRamp(delta) {
+      playerBall.position.x = BABYLON.Scalar.Lerp(playerBall.position.x, 0, Math.min(1, delta * 10));
+
+      state.rampJumpTime += delta;
+      const t = Math.min(1, state.rampJumpTime / state.rampJumpDuration);
+
+      const currentStep = state.rampCurrentJump;
+      const fromZ = state.rampStartZ;
+      const fromY = state.rampStartY;
+      const toZ = fromZ + state.rampStepFwd;
+      const toY = fromY + state.rampStepUp;
+
+      const arcHeight = 2.0;
+      const arc = 4 * arcHeight * t * (1 - t);
+
+      playerBall.position.z = fromZ + (toZ - fromZ) * t;
+      playerBall.position.y = fromY + (toY - fromY) * t + arc;
+      for (let i = 0; i < state.rampMeshes.length; i++) {
+        const stepDepth = state.rampStepFwd;
+        const stepHeight = 1.2 + i * state.rampStepUp;
+        state.rampMeshes[i].position.z = state.rampBaseZ + i * stepDepth;
+        state.rampMeshes[i].position.y = stepHeight / 2;
+      }
+      for (let i = 0; i < state.rampLabels.length; i++) {
+        const stepIdx = Math.floor(i / 2);
+        const stepDepth = state.rampStepFwd;
+        const stepHeight = 1.2 + stepIdx * state.rampStepUp;
+        state.rampLabels[i].position.z = state.rampBaseZ + stepIdx * stepDepth;
+        state.rampLabels[i].position.y = stepHeight + 0.01;
+      }
+
+      const camera = scene.activeCamera;
+      camera.target.x = BABYLON.Scalar.Lerp(camera.target.x, 0, Math.min(1, delta * 4));
+      camera.target.y = BABYLON.Scalar.Lerp(camera.target.y, playerBall.position.y + 2, Math.min(1, delta * 3));
+      camera.target.z = BABYLON.Scalar.Lerp(camera.target.z, playerBall.position.z + 3, Math.min(1, delta * 4));
+
+      if (t >= 1) {
+        state.rampCurrentJump++;
+        state.rampCurrentStep = state.rampCurrentJump;
+
+        if (state.rampCurrentJump >= state.rampJumps) {
+          state.phase = "landed";
+          state.landedTimer = 0;
+          spawnConfetti(playerBall.position.clone());
+          return;
+        }
+
+        state.rampStartZ = playerBall.position.z;
+        state.rampStartY = toY;
+        playerBall.position.y = toY;
+        state.rampJumpTime = 0;
+      }
+    }
+
+    function spawnConfetti(pos) {
+      const colors = ["#ff5e7e", "#00c2ff", "#ffe600", "#39ff14", "#9d4edd", "#ff9f1a", "#00f5a0", "#ff3d81"];
+      for (let i = 0; i < 40; i++) {
+        const confetti = BABYLON.MeshBuilder.CreateBox("confetti-" + Math.random(), { width: 0.15, height: 0.15, depth: 0.02 }, scene);
+        confetti.position = pos.clone();
+        confetti.position.y += 1;
+        const hex = colors[Math.floor(Math.random() * colors.length)];
+        const mat = new BABYLON.StandardMaterial("confetti-mat-" + Math.random(), scene);
+        mat.diffuseColor = color3FromHex(hex);
+        mat.emissiveColor = color3FromHex(hex).scale(0.5);
+        mat.specularColor = BABYLON.Color3.Black();
+        confetti.material = mat;
+
+        const vx = (Math.random() - 0.5) * 8;
+        const vy = 5 + Math.random() * 6;
+        const vz = (Math.random() - 0.5) * 8;
+        const rotSpeed = new BABYLON.Vector3((Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10, (Math.random() - 0.5) * 10);
+        let life = 0;
+        const obs = scene.onBeforeRenderObservable.add(() => {
+          const dt = scene.getEngine().getDeltaTime() / 1000;
+          life += dt;
+          confetti.position.x += vx * dt;
+          confetti.position.y += (vy - life * 12) * dt;
+          confetti.position.z += vz * dt;
+          confetti.rotation.x += rotSpeed.x * dt;
+          confetti.rotation.y += rotSpeed.y * dt;
+          confetti.rotation.z += rotSpeed.z * dt;
+          if (life > 2) {
+            scene.onBeforeRenderObservable.remove(obs);
+            confetti.dispose();
+          }
+        });
+      }
+    }
+
+    function playSplitEffect(pos, halfValue) {
+      for (let side = -1; side <= 1; side += 2) {
+        const half = BABYLON.MeshBuilder.CreateSphere("split-" + Math.random(), { diameter: 1.0, segments: 16 }, scene);
+        half.position = pos.clone();
+        half.material = createValueMaterial(scene, halfValue);
+        const label = buildLabel(scene, halfValue);
+        label.plane.parent = half;
+        label.plane.position.z = -0.52;
+        let life = 0;
+        const startX = pos.x;
+        const startY = pos.y;
+        const duration = 0.6;
+        const obs = scene.onBeforeRenderObservable.add(() => {
+          const dt = scene.getEngine().getDeltaTime() / 1000;
+          life += dt;
+          const t = Math.min(1, life / duration);
+          const ease = 1 - Math.pow(1 - t, 3);
+          half.position.x = startX + side * 3 * ease;
+          half.position.y = startY + Math.sin(t * Math.PI) * 2;
+          half.rotation.y += dt * side * 4;
+          const fadeT = t > 0.6 ? (t - 0.6) / 0.4 : 0;
+          const s = 1 - fadeT * 0.8;
+          half.scaling.x = s;
+          half.scaling.y = s;
+          half.scaling.z = s;
+          if (half.material) half.material.alpha = 1 - fadeT;
+          if (life > duration) {
+            scene.onBeforeRenderObservable.remove(obs);
+            half.dispose();
+            label.plane.dispose();
+          }
+        });
+      }
+
+      state.splitAnim = { startScale: getCollectibleScale(halfValue) * 0.5, targetScale: getCollectibleScale(state.playerValue), life: 0 };
+    }
+
+    function finishRamp() {
+      const totalSteps = state.rampJumps;
+      const multiplier = RAMP_MULTIPLIERS[Math.min(totalSteps - 1, RAMP_STEPS - 1)];
+      const finalScore = state.score * multiplier;
+      state.score = finalScore;
+      scoreValue.textContent = String(finalScore);
+      state.phase = "ended";
+      state.running = false;
+      overlay.classList.remove("hidden");
+      overlay.classList.add("dimmed");
+      document.getElementById("overlayPanel").classList.remove("hidden");
+      overlayMessage.innerHTML = "<div class='multiplier'>x" + multiplier + "</div><div class='final-score'>Score <strong>" + finalScore + "</strong></div>";
+      state.resetTimer = setTimeout(() => {
+        resetGame();
+      }, 5000);
+    }
+
+    function recycleRoad(delta) {
+      state.roadTiles.forEach((tile) => {
+        tile.root.position.z -= state.speed * delta;
+        if (tile.root.position.z < -18) {
+          tile.root.position.z += state.roadTiles.length * 18;
+          configureTrackTile(tile, state.trackCursor, scene);
+          state.trackCursor += 1;
+        }
+      });
+    }
+
+    function updateFloor(delta) {
+      if (!state.floorTiles) return;
+      state.floorTiles.forEach((f) => {
+        f.position.z -= state.speed * delta;
+        if (f.position.z < -60) {
+          f.position.z += state.floorTiles.length * 60;
+        }
+      });
+    }
+
+    function updateScenery(delta) {
+      if (!state.sceneryMeshes) return;
+      state.sceneryMeshes.forEach((m) => {
+        m.position.z -= state.speed * delta;
+        if (m.position.z < -20) {
+          m.position.z += STAGE_LENGTH * 1.2;
+        }
+      });
+    }
+
+    function updateWater(delta) {
+      state.waterTiles.forEach((water) => {
+        water.position.z -= state.speed * delta * 0.96;
+        water.position.y = -3.5 + Math.sin(performance.now() * 0.002 + water.position.z * 0.05) * 0.1;
+        if (water.position.z < -22) {
+          water.position.z += state.waterTiles.length * 40;
+        }
+      });
+    }
+
+function checkForFall() {
+      const safeHalfWidth = getPlayerHorizontalLimit();
+
+      if (Math.abs(playerBall.position.x) > safeHalfWidth) {
+        triggerFall("You fell off the track!");
+      }
+    }
+
+    function triggerFall(reason) {
+      if (state.falling) {
+        return;
+      }
+      state.running = false;
+      state.falling = true;
+      state.fallVelocity = 0;
+      state.targetX = playerBall.position.x;
+      state.pendingFallReason = reason;
+    }
+
+    function updateFall(delta) {
+      state.fallVelocity += 18 * delta;
+      playerBall.position.y -= state.fallVelocity * delta;
+      playerBall.rotation.z += delta * 2;
+
+      const camera = scene.activeCamera;
+      camera.target.x = BABYLON.Scalar.Lerp(camera.target.x, playerBall.position.x, Math.min(1, delta * 3));
+      camera.target.y = BABYLON.Scalar.Lerp(camera.target.y, playerBall.position.y, Math.min(1, delta * 3));
+
+      recycleRoad(delta * 0.45);
+      updateCollectibles(delta * 0.45);
+
+      updateGates(delta * 0.45);
+
+      if (playerBall.position.y < -6.8) {
+        state.falling = false;
+        endGame(state.pendingFallReason || "You fell off the track!");
+      }
+    }
+
+    function updateCollectibles(delta) {
+      const playerPos = playerBall.position;
+      const playerRadius = 1.0;
+      state.collectibles = state.collectibles.filter((item) => {
+        item.mesh.position.z -= state.speed * 0.6 * delta;
+        if (!item.vx) { item.vx = 0; item.vz = 0; }
+
+        item.mesh.position.x += item.vx * delta;
+        item.mesh.position.z += item.vz * delta;
+
+        if (item.launched) {
+          if (!item.vy) item.vy = 0;
+          item.vy -= 15 * delta;
+          item.mesh.position.y += item.vy * delta;
+          item.mesh.rotation.y += (item.spinSpeed || 5) * delta;
+          item.mesh.rotation.x += delta * 3;
+          if (item.mesh.position.y < -5) {
+            disposeEntity(item);
+            return false;
+          }
+        } else {
+          item.vx *= Math.exp(-2 * delta);
+          item.vz *= Math.exp(-2 * delta);
+          item.mesh.position.y = Math.abs(Math.sin(performance.now() * 0.005 + item.value)) * 0.3;
+        }
+
+        if (item.mesh.position.z < -8 || Math.abs(item.mesh.position.x) > 12) {
+          disposeEntity(item);
+          return false;
+        }
+
+        const pHalfW = 1.1, pHalfD = 1.75;
+        const iHalfW = 1.1, iHalfD = 1.75;
+        const dx = item.mesh.position.x - playerPos.x;
+        const dz = item.mesh.position.z - playerPos.z;
+        const overlapX = (pHalfW + iHalfW) - Math.abs(dx);
+        const overlapZ = (pHalfD + iHalfD) - Math.abs(dz);
+        if (!state.falling && !item.launched && overlapX > 0 && overlapZ > 0) {
+          if (item.value === state.playerValue) {
+            handlePickup(item);
+            disposeEntity(item);
+            return false;
+          }
+          if (item.value > state.playerValue) {
+            const pushDir = dx === 0 ? (Math.random() > 0.5 ? 1 : -1) : -Math.sign(dx);
+            state.targetX = clampTargetX(state.targetX + pushDir * 3);
+            return true;
+          }
+          const sideDir = dx === 0 ? (Math.random() > 0.5 ? 1 : -1) : Math.sign(dx);
+          const playerPow = Math.log2(Math.max(2, state.playerValue));
+          const itemPow = Math.log2(Math.max(2, item.value));
+          const diff = Math.max(1, playerPow - itemPow);
+          const forceMult = 0.2 + diff * 0.35;
+          const baseForce = state.speed * 0.9 + 6;
+          item.vx = sideDir * baseForce * forceMult * (0.6 + Math.random() * 0.4);
+          item.vz = (state.speed * 0.15 + Math.random() * 1.5) * forceMult;
+          item.vy = (0.5 + diff * 0.75) + Math.random() * 1;
+          item.launched = diff >= 3;
+          item.spinSpeed = diff >= 3 ? sideDir * (8 + Math.random() * 6) : sideDir * 2;
+          state.score += item.value;
+          scoreValue.textContent = String(state.score);
+          playCollisionEffect(item.mesh.position.clone(), diff);
+          if (overlapX < overlapZ) {
+            item.mesh.position.x += Math.sign(dx) * overlapX;
+          } else {
+            item.mesh.position.z += Math.sign(dz) * overlapZ;
+          }
+          return true;
+        }
+
+        return true;
+      });
+    }
+
+    function processCollectibleInteractions() {
+      const removed = new Set();
+      for (let i = 0; i < state.collectibles.length; i++) {
+        const a = state.collectibles[i];
+        if (!a || removed.has(a)) continue;
+        if (!a.vx) { a.vx = 0; a.vz = 0; }
+        for (let j = i + 1; j < state.collectibles.length; j++) {
+          const b = state.collectibles[j];
+          if (!b || removed.has(b)) continue;
+          if (!b.vx) { b.vx = 0; b.vz = 0; }
+
+          const dx = b.mesh.position.x - a.mesh.position.x;
+          const dz = b.mesh.position.z - a.mesh.position.z;
+          const minDist = a.radius + b.radius;
+          const distSq = dx * dx + dz * dz;
+          if (distSq >= minDist * minDist) continue;
+
+          const dist = Math.max(0.01, Math.sqrt(distSq));
+          const nx = dx / dist;
+          const nz = dz / dist;
+          const overlap = minDist - dist;
+
+          if (a.value === b.value) {
+            const receiver = a.mesh.position.z >= b.mesh.position.z ? a : b;
+            const absorbed = receiver === a ? b : a;
+            receiver.value *= 2;
+            receiver.mesh.position.x = (a.mesh.position.x + b.mesh.position.x) / 2;
+            receiver.mesh.position.z = Math.max(a.mesh.position.z, b.mesh.position.z);
+            receiver.vx = (a.vx + b.vx) * 0.4;
+            receiver.vz = (a.vz + b.vz) * 0.4 + 2;
+            updateCollectibleAppearance(receiver);
+            disposeEntity(absorbed);
+            removed.add(absorbed);
+            break;
+          }
+
+          const randAngle = (Math.random() - 0.5) * 0.35;
+          const rnx = nx * Math.cos(randAngle) - nz * Math.sin(randAngle);
+          const rnz = nx * Math.sin(randAngle) + nz * Math.cos(randAngle);
+
+          a.mesh.position.x -= rnx * overlap * 0.5;
+          a.mesh.position.z -= rnz * overlap * 0.5;
+          b.mesh.position.x += rnx * overlap * 0.5;
+          b.mesh.position.z += rnz * overlap * 0.5;
+
+          const relVx = b.vx - a.vx;
+          const relVz = b.vz - a.vz;
+          const velAlongNormal = relVx * rnx + relVz * rnz;
+          if (velAlongNormal > 0) continue;
+
+          const restitution = 0.7;
+          const impulse = -(1 + restitution) * velAlongNormal * 0.5;
+          a.vx -= impulse * rnx;
+          a.vz -= impulse * rnz;
+          b.vx += impulse * rnx;
+          b.vz += impulse * rnz;
+
+          const minBounce = 2;
+          if (Math.abs(a.vx) + Math.abs(a.vz) < minBounce) {
+            a.vx -= rnx * minBounce;
+            a.vz -= rnz * minBounce;
+          }
+          if (Math.abs(b.vx) + Math.abs(b.vz) < minBounce) {
+            b.vx += rnx * minBounce;
+            b.vz += rnz * minBounce;
+          }
+        }
+      }
+      if (removed.size > 0) {
+        state.collectibles = state.collectibles.filter((item) => !removed.has(item));
+      }
+    }
+
+    function updateCollectibleAppearance(item) {
+      if (item.carMesh && !item.carMesh.isDisposed()) {
+        item.carMesh.getChildMeshes().forEach((m) => m.dispose());
+        item.carMesh.dispose();
+      }
+      const newCar = createCarInstance(item.value, scene);
+      if (newCar) {
+        newCar.parent = item.mesh;
+        newCar.position = BABYLON.Vector3.Zero();
+        item.carMesh = newCar;
+      }
+      item.radius = 1.0;
+      drawLabel(item.labelPlane.material.diffuseTexture, item.value, "#172038");
+    }
+
+
+    function updateGates(delta) {
+      const playerPos = playerBall.position;
+      state.gates = state.gates.filter((item) => {
+        item.mesh.position.z -= state.speed * delta;
+
+        if (item.mesh.position.z < -10) {
+          disposeThorn(item);
+          return false;
+        }
+
+        if (!state.falling && Math.abs(item.mesh.position.z - playerPos.z) < 1.3 && Math.abs(item.mesh.position.x - playerPos.x) < 1.35) {
+          state.playerValue = Math.floor(state.playerValue / 2);
+          if (state.playerValue < 2) {
+            endGame("Your ball was destroyed by thorns!");
+            disposeThorn(item);
+            return false;
+          }
+          playSplitEffect(playerBall.position.clone(), state.playerValue);
+          updatePlayerVisuals();
+          disposeThorn(item);
+          return false;
+        }
+
+        return true;
+      });
+    }
+
+    function disposeThorn(item) {
+      if (item.mesh && !item.mesh.isDisposed()) {
+        item.mesh.getChildMeshes().forEach((m) => m.dispose());
+        item.mesh.dispose();
+      }
+      if (item.labelPlane && !item.labelPlane.isDisposed()) {
+        item.labelPlane.dispose();
+      }
+    }
+
+    function handlePickup(item) {
+      state.playerValue *= 2;
+      state.score += state.playerValue;
+      state.bestBall = Math.max(state.bestBall, state.playerValue);
+      updatePlayerVisuals();
+      playMergeEffect(playerBall.position.clone());
+
+      for (let i = 0; i < 3; i++) {
+        const bonusZ = state.nextSpawnZ + 5 + i * 6;
+        const col = spawnColumns[Math.floor(Math.random() * spawnColumns.length)];
+        spawnCollectible(0, bonusZ, state.playerValue, col);
+      }
+
+      if (state.playerValue >= 2048 && !state.rocketMode) {
+        state.rocketMode = true;
+      }
+    }
+
+    function playCollisionEffect(pos, intensity) {
+      const sparkCount = Math.min(20, 3 + intensity * 3);
+      const sparkSize = 0.1 + intensity * 0.05;
+      const sparkSpeed = 2 + intensity * 2;
+      const duration = 0.3 + intensity * 0.15;
+
+      for (let i = 0; i < sparkCount; i++) {
+        const spark = BABYLON.MeshBuilder.CreateBox("cspark-" + Math.random(), { size: sparkSize }, scene);
+        spark.position = pos.clone();
+        spark.position.y += 0.5;
+        const mat = new BABYLON.StandardMaterial("cspark-mat-" + Math.random(), scene);
+        const colors = ["#ff6600", "#ffcc00", "#ff3300", "#ffffff"];
+        const c = color3FromHex(colors[Math.floor(Math.random() * colors.length)]);
+        mat.emissiveColor = c;
+        mat.diffuseColor = c;
+        spark.material = mat;
+
+        const angle = Math.random() * Math.PI * 2;
+        const vx = Math.cos(angle) * sparkSpeed * (0.5 + Math.random());
+        const vy = 1.5 + Math.random() * sparkSpeed;
+        const vz = Math.sin(angle) * sparkSpeed * (0.5 + Math.random());
+        const rotSpeed = (Math.random() - 0.5) * 15;
+        let life = 0;
+
+        const obs = scene.onBeforeRenderObservable.add(() => {
+          const dt = scene.getEngine().getDeltaTime() / 1000;
+          life += dt;
+          const t = life / duration;
+          spark.position.x += vx * dt;
+          spark.position.y += (vy - life * 12) * dt;
+          spark.position.z += vz * dt;
+          spark.rotation.x += rotSpeed * dt;
+          spark.rotation.z += rotSpeed * dt;
+          const fade = Math.max(0, 1 - t);
+          spark.scaling.x = fade;
+          spark.scaling.y = fade;
+          spark.scaling.z = fade;
+          if (life > duration) {
+            scene.onBeforeRenderObservable.remove(obs);
+            spark.dispose();
+          }
+        });
+      }
+    }
+
+    function playMergeEffect(pos) {
+      state.mergeAnim = { startScale: getCollectibleScale(state.playerValue) * 1.35, targetScale: getCollectibleScale(state.playerValue), life: 0 };
+
+      for (let i = 0; i < 8; i++) {
+        const spark = BABYLON.MeshBuilder.CreateSphere("spark-" + Math.random(), { diameter: 0.25, segments: 6 }, scene);
+        spark.position = pos.clone();
+        spark.position.y += 0.5;
+        spark.material = createValueMaterial(scene, state.playerValue);
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 2 + Math.random() * 3;
+        const vx = Math.cos(angle) * speed;
+        const vy = 2.5 + Math.random() * 3;
+        const vz = Math.sin(angle) * speed;
+        let life = 0;
+        const duration = 0.5 + Math.random() * 0.2;
+        const obs = scene.onBeforeRenderObservable.add(() => {
+          const dt = scene.getEngine().getDeltaTime() / 1000;
+          life += dt;
+          const t = Math.min(1, life / duration);
+          spark.position.x += vx * dt;
+          spark.position.y += (vy - life * 10) * dt;
+          spark.position.z += vz * dt;
+          const fadeT = t > 0.5 ? (t - 0.5) / 0.5 : 0;
+          const s = (1 - fadeT);
+          spark.scaling.x = s;
+          spark.scaling.y = s;
+          spark.scaling.z = s;
+          if (spark.material) spark.material.alpha = 1 - fadeT;
+          if (life > duration) {
+            scene.onBeforeRenderObservable.remove(obs);
+            spark.dispose();
+          }
+        });
+      }
+    }
+
+
+    window.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+        state.inputLeft = true;
+      }
+      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {
+        state.inputRight = true;
+      }
+      if (event.key === " " && !state.running) {
+        resetGame();
+      }
+    });
+
+    window.addEventListener("keyup", (event) => {
+      if (event.key === "ArrowLeft" || event.key.toLowerCase() === "a") {
+        state.inputLeft = false;
+      }
+      if (event.key === "ArrowRight" || event.key.toLowerCase() === "d") {
+        state.inputRight = false;
+      }
+    });
+
+    canvas.addEventListener("pointerdown", (event) => {
+      state.touchStartX = event.clientX;
+      state.touchStartTargetX = state.targetX;
+    });
+
+    canvas.addEventListener("pointermove", (event) => {
+      if (state.touchStartX === null || !state.running) {
+        return;
+      }
+
+      const deltaX = event.clientX - state.touchStartX;
+      state.targetX = clampTargetX(state.touchStartTargetX + deltaX * 0.022);
+    });
+
+    canvas.addEventListener("pointerup", (event) => {
+      if (state.touchStartX === null) {
+        return;
+      }
+
+      const deltaX = event.clientX - state.touchStartX;
+      if (Math.abs(deltaX) > 8) {
+        state.targetX = clampTargetX(state.touchStartTargetX + deltaX * 0.022);
+      }
+      state.touchStartX = null;
+    });
+
+    function autoStart() {
+      if (!state.running) {
+        resetGame();
+      }
+    }
+
+
+
+    window.addEventListener("keydown", function autoStartKey(e) {
+      if (!state.running && !overlay.classList.contains("hidden")) {
+        autoStart();
+      }
+    }, { once: false });
+
+    canvas.addEventListener("pointerdown", function autoStartTouch(e) {
+      if (!state.running && !overlay.classList.contains("hidden")) {
+        autoStart();
+      }
+    }, { once: false });
+
+    overlay.addEventListener("pointerdown", function(e) {
+      if (!state.running && !overlay.classList.contains("hidden")) {
+        autoStart();
+      }
+    });
+
+    try {
+      scene = createScene();
+
+      preloadCarModels(scene).then(() => {
+        resetGame();
+      });
+
+      engine.runRenderLoop(() => {
+        const delta = engine.getDeltaTime() / 1000;
+        update(delta);
+        scene.render();
+      });
+
+      window.addEventListener("resize", () => {
+        engine.resize();
+      });
+    } catch (error) {
+      overlay.classList.remove("hidden");
+      overlayMessage.innerHTML = "An error occurred while starting the game.<br><br><span class='danger'>" + (error && error.message ? error.message : "Unknown error") + "</span>";
+      overlayMessage.innerHTML = "Error loading game.";
+      console.error(error);
+    }
+  </script>
+</body>
+</html>
