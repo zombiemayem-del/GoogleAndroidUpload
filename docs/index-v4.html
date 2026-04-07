@@ -331,7 +331,10 @@
       sceneryMeshes: [],
       nextSpawnZ: 35,
       rocketMode: false,
-      rocketParticleTimer: 0
+      rocketParticleTimer: 0,
+      jumpVelocity: 0,
+      isJumping: false,
+      playerY: 0.5
     };
 
     let scene;
@@ -872,6 +875,9 @@ function getTrackKind(segmentIndex) {
       state.nextSpawnZ = 35;
       state.rocketMode = false;
       state.rocketParticleTimer = 0;
+      state.jumpVelocity = 0;
+      state.isJumping = false;
+      state.playerY = 0.5;
 
       state.collectibles.forEach((item) => disposeEntity(item));
       state.gates.forEach((item) => disposeThorn(item));
@@ -1130,6 +1136,17 @@ function getTrackKind(segmentIndex) {
       playerBall.position.x = BABYLON.Scalar.Lerp(playerBall.position.x, state.targetX, Math.min(1, delta * 10));
       playerBall.rotation.x += delta * (state.speed * 0.4);
       playerBall.rotation.z = BABYLON.Scalar.Lerp(playerBall.rotation.z, (state.targetX - playerBall.position.x) * 0.15, Math.min(1, delta * 8));
+
+      if (state.isJumping) {
+        state.jumpVelocity -= 20 * delta;
+        state.playerY += state.jumpVelocity * delta;
+        if (state.playerY <= 0.5) {
+          state.playerY = 0.5;
+          state.isJumping = false;
+          state.jumpVelocity = 0;
+        }
+      }
+      playerBall.position.y = state.playerY;
 
       playerBall.scaling.x = 1;
       playerBall.scaling.y = 1;
@@ -1775,6 +1792,10 @@ function checkForFall() {
       if (event.key === " " && !state.running) {
         resetGame();
       }
+      if (event.key === " " && state.running && !state.isJumping) {
+        state.isJumping = true;
+        state.jumpVelocity = 8;
+      }
     });
 
     window.addEventListener("keyup", (event) => {
@@ -1788,6 +1809,7 @@ function checkForFall() {
 
     canvas.addEventListener("pointerdown", (event) => {
       state.touchStartX = event.clientX;
+      state.touchStartY = event.clientY;
       state.touchStartTargetX = state.targetX;
     });
 
@@ -1806,10 +1828,15 @@ function checkForFall() {
       }
 
       const deltaX = event.clientX - state.touchStartX;
-      if (Math.abs(deltaX) > 8) {
+      const deltaY = event.clientY - (state.touchStartY || event.clientY);
+      if (deltaY < -30 && state.running && !state.isJumping) {
+        state.isJumping = true;
+        state.jumpVelocity = 8;
+      } else if (Math.abs(deltaX) > 8) {
         state.targetX = clampTargetX(state.touchStartTargetX + deltaX * 0.022);
       }
       state.touchStartX = null;
+      state.touchStartY = null;
     });
 
     function autoStart() {
