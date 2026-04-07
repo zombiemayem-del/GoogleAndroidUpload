@@ -523,9 +523,6 @@ function getTrackKind(segmentIndex) {
       scene.imageProcessingConfiguration.contrast = 1.0;
       scene.imageProcessingConfiguration.exposure = 1.0;
 
-      const glow = new BABYLON.GlowLayer("glow", scene, { blurKernelSize: 32 });
-      glow.intensity = 0.3;
-      scene.glowLayer = glow;
 
       const camera = new BABYLON.ArcRotateCamera(
         "camera",
@@ -630,7 +627,7 @@ function getTrackKind(segmentIndex) {
           templates[file] = root;
         }).catch(() => {})
       )).then(() => {
-        for (let z = 0; z < STAGE_LENGTH * 1.2; z += 6 + Math.random() * 5) {
+        for (let z = 0; z < STAGE_LENGTH * 1.2; z += 4 + Math.random() * 3) {
           for (const side of [-1, 1]) {
             const x = side * (9 + Math.random() * 4);
             const isTree = Math.random() < 0.4;
@@ -1159,23 +1156,15 @@ function getTrackKind(segmentIndex) {
         const shakeX = (Math.random() - 0.5) * 0.15;
         playerBall.position.x += shakeX;
 
-        if (scene.glowLayer) {
-          scene.glowLayer.intensity = 0.8;
-        }
-      } else {
-        if (scene.glowLayer) {
-          scene.glowLayer.intensity = 0.3;
-        }
       }
 
       const camera = scene.activeCamera;
       const valuePow = Math.log2(Math.max(2, state.playerValue));
-      const wantedRadius = cameraDefaults.radius + valuePow * 3;
-      const wantedY = cameraDefaults.target.y + valuePow * 2;
+      const wantedRadius = cameraDefaults.radius + valuePow * 2;
       camera.radius = BABYLON.Scalar.Lerp(camera.radius, wantedRadius, Math.min(1, delta * 1.5));
       camera.target.x = BABYLON.Scalar.Lerp(camera.target.x, playerBall.position.x, Math.min(1, delta * 4));
-      camera.target.y = BABYLON.Scalar.Lerp(camera.target.y, wantedY, Math.min(1, delta * 1.5));
-      camera.target.z = playerBall.position.z - 4;
+      camera.target.y = cameraDefaults.target.y;
+      camera.target.z = playerBall.position.z;
 
       recycleRoad(delta);
       updateScenery(delta);
