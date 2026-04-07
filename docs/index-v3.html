@@ -220,7 +220,7 @@
     const overlayMessage = document.getElementById("overlayMessage");
 
     const laneX = [-3.2, 0, 3.2];
-    const spawnColumns = [-4, -2, 0, 2, 4];
+    const spawnColumns = [-4, 0, 4];
     const cameraDefaults = {
       alpha: -Math.PI / 2 + 0.15,
       beta: 0.85,
@@ -284,7 +284,7 @@
       const clone = template.clone("car-" + Math.random());
       clone.setEnabled(true);
       clone.getChildMeshes().forEach((m) => m.setEnabled(true));
-      const s = ((carScaleMap[value] || 0.6) + 0.3) * 1.8;
+      const s = ((carScaleMap[value] || 0.6) + 0.3) * 1.62;
       clone.scaling = new BABYLON.Vector3(s, s, s);
       clone.rotation.y = 0;
       return clone;
@@ -532,8 +532,8 @@ function getTrackKind(segmentIndex) {
         cameraDefaults.target.clone(),
         scene
       );
-      camera.lowerRadiusLimit = 13;
-      camera.upperRadiusLimit = 18;
+      camera.lowerRadiusLimit = 15;
+      camera.upperRadiusLimit = 80;
       camera.wheelPrecision = 50;
       camera.inputs.clear();
 
