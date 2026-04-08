@@ -252,13 +252,13 @@
       2: "animal-chick.glb",
       4: "animal-bunny.glb",
       8: "animal-cat.glb",
-      16: "animal-dog.glb",
-      32: "animal-fox.glb",
-      64: "animal-pig.glb",
-      128: "animal-cow.glb",
-      256: "animal-panda.glb",
-      512: "animal-lion.glb",
-      1024: "animal-tiger.glb",
+      16: "animal-pig.glb",
+      32: "animal-monkey.glb",
+      64: "animal-cow.glb",
+      128: "animal-tiger.glb",
+      256: "animal-lion.glb",
+      512: "animal-panda.glb",
+      1024: "animal-giraffe.glb",
       2048: "animal-elephant.glb"
     };
     const MODELS_PATH = "models/";
@@ -294,7 +294,7 @@
       const clone = template.clone("car-" + Math.random());
       clone.setEnabled(true);
       clone.getChildMeshes().forEach((m) => m.setEnabled(true));
-      const s = ((carScaleMap[value] || 0.6) + 0.3) * 1.62;
+      const s = ((carScaleMap[value] || (value > 2048 ? 1.2 : 0.6)) + 0.3) * 1.62;
       clone.scaling = new BABYLON.Vector3(s, s, s);
       clone.rotation.y = facingPlayer ? Math.PI : 0;
       return clone;
@@ -694,6 +694,25 @@ function getTrackKind(segmentIndex) {
       shadowMat.alpha = 0.3;
       shadowMat.specularColor = BABYLON.Color3.Black();
       state.playerShadow.material = shadowMat;
+
+      // DEBUG GIZMOS - spawn distance markers
+      const gizmoFull = BABYLON.MeshBuilder.CreateBox("gizmo-full", { width: 12, height: 0.3, depth: 0.3 }, scene);
+      const gizmoFullMat = new BABYLON.StandardMaterial("gizmo-full-mat", scene);
+      gizmoFullMat.diffuseColor = new BABYLON.Color3(1, 0, 0);
+      gizmoFullMat.alpha = 0.7;
+      gizmoFullMat.specularColor = BABYLON.Color3.Black();
+      gizmoFull.material = gizmoFullMat;
+      gizmoFull.position.y = 0.5;
+      state.gizmoFull = gizmoFull;
+
+      const gizmoHalf = BABYLON.MeshBuilder.CreateBox("gizmo-half", { width: 12, height: 0.3, depth: 0.3 }, scene);
+      const gizmoHalfMat = new BABYLON.StandardMaterial("gizmo-half-mat", scene);
+      gizmoHalfMat.diffuseColor = new BABYLON.Color3(0, 1, 0);
+      gizmoHalfMat.alpha = 0.7;
+      gizmoHalfMat.specularColor = BABYLON.Color3.Black();
+      gizmoHalf.material = gizmoHalfMat;
+      gizmoHalf.position.y = 0.5;
+      state.gizmoHalf = gizmoHalf;
     }
 
     function buildLabel(scene, value, texSize) {
@@ -959,7 +978,9 @@ function getTrackKind(segmentIndex) {
     }
 
     function fillTrack() {
-      while (state.nextSpawnZ < state.distance + 60 && state.nextSpawnZ < STAGE_LENGTH * 0.92) {
+      const playerPow = Math.max(1, Math.floor(Math.log2(Math.max(2, state.playerValue))));
+      const spawnAhead = playerPow <= 5 ? 45 : 45 + (playerPow - 5) * 2.5;
+      while (state.nextSpawnZ < state.distance + spawnAhead && state.nextSpawnZ < STAGE_LENGTH * 0.92) {
         if (!state.lastFenceZ) state.lastFenceZ = 0;
         if (Math.random() > 0.90 && state.nextSpawnZ - state.lastFenceZ > 30) {
           spawnThorn(0, state.nextSpawnZ);
@@ -967,15 +988,16 @@ function getTrackKind(segmentIndex) {
         } else {
           const count = Math.random() < 0.3 ? 1 : (Math.random() < 0.6 ? 2 : 3);
           for (let c = 0; c < count; c++) {
-            const playerPow = Math.max(1, Math.floor(Math.log2(Math.max(2, state.playerValue))));
             const roll = Math.random();
             let pow;
-            if (roll < 0.60) {
+            if (roll < 0.25) {
               pow = playerPow;
-            } else if (roll < 0.80) {
+            } else if (roll < 0.60) {
+              pow = Math.max(1, playerPow - 1 - Math.floor(Math.random() * 2));
+            } else if (roll < 0.85) {
               pow = playerPow + 1 + Math.floor(Math.random() * Math.min(3, 11 - playerPow));
             } else {
-              pow = Math.max(1, playerPow - 1 - Math.floor(Math.random() * 2));
+              pow = Math.max(1, Math.floor(Math.random() * playerPow) + 1);
             }
             pow = Math.max(1, Math.min(11, pow));
             const value = Math.pow(2, pow);
@@ -1211,6 +1233,18 @@ function getTrackKind(segmentIndex) {
       camera.target.x = BABYLON.Scalar.Lerp(camera.target.x, playerBall.position.x, Math.min(1, delta * 4));
       camera.target.y = cameraDefaults.target.y;
       camera.target.z = playerBall.position.z + 5;
+
+      // Update debug gizmos
+      const dbgPow = Math.max(1, Math.floor(Math.log2(Math.max(2, state.playerValue))));
+      const dbgAhead = dbgPow <= 5 ? 45 : 45 + (dbgPow - 5) * 2.5;
+      if (state.gizmoFull) {
+        state.gizmoFull.position.z = playerBall.position.z + dbgAhead;
+        state.gizmoFull.position.x = playerBall.position.x;
+      }
+      if (state.gizmoHalf) {
+        state.gizmoHalf.position.z = playerBall.position.z + dbgAhead * 0.5;
+        state.gizmoHalf.position.x = playerBall.position.x;
+      }
 
       recycleRoad(delta);
       updateScenery(delta);
