@@ -261,7 +261,7 @@
       return Promise.all(Object.entries(carModels).map(([val, file]) => {
         return BABYLON.SceneLoader.ImportMeshAsync("", MODELS_PATH, file, scene).then((result) => {
           const wrapper = new BABYLON.TransformNode("car-wrapper-" + val, scene);
-          wrapper.rotation.y = 0;
+          wrapper.rotation.y = Math.PI;
           const pivot = new BABYLON.TransformNode("car-pivot-" + val, scene);
           pivot.parent = wrapper;
           const root = result.meshes[0];
@@ -334,7 +334,7 @@
       rocketParticleTimer: 0,
       jumpVelocity: 0,
       isJumping: false,
-      playerY: 1.0
+      playerY: 1.2
     };
 
     let scene;
@@ -356,16 +356,6 @@ function getTrackKind(segmentIndex) {
       const surface = BABYLON.MeshBuilder.CreateBox("track-surface-" + segmentIndex, { width: 12, depth: 18, height: 0.7 }, scene);
       surface.parent = root;
 
-      const dashMat = createColorMaterial(scene, "#d7ccc8");
-      dashMat.roughness = 0.9;
-      for (const laneX of [-2, 2]) {
-        for (let d = 0; d < 5; d++) {
-          const dash = BABYLON.MeshBuilder.CreateBox("dash-" + segmentIndex + "-" + laneX + "-" + d, { width: 0.15, depth: 2, height: 0.02 }, scene);
-          dash.parent = root;
-          dash.position = new BABYLON.Vector3(laneX, 0.36, -7.2 + d * 4.5);
-          dash.material = dashMat;
-        }
-      }
 
       const leftRope = BABYLON.MeshBuilder.CreateCylinder("track-left-rope-" + segmentIndex, { height: 18, diameter: 0.1, tessellation: 10 }, scene);
       leftRope.parent = root;
@@ -408,8 +398,8 @@ function getTrackKind(segmentIndex) {
       const borderRight = BABYLON.MeshBuilder.CreateBox("border-right-" + segmentIndex, { width: 0.3, depth: 18, height: 0.6 }, scene);
       borderRight.parent = root;
       borderRight.position = new BABYLON.Vector3(6.15, 0.3, 0);
-      const borderMat = createColorMaterial(scene, "#8d6e63");
-      borderMat.roughness = 0.7;
+      const borderMat = createColorMaterial(scene, "#6D4C2A");
+      borderMat.roughness = 0.85;
       borderLeft.material = borderMat;
       borderRight.material = borderMat;
 
@@ -443,7 +433,7 @@ function getTrackKind(segmentIndex) {
       tile.surface.scaling.x = width / 12;
       tile.surface.position.y = stone ? -0.1 : 0;
       tile.surface.position.x = 0;
-      tile.surface.material = createColorMaterial(sceneRef, stone ? "#8BC34A" : "#9CCC65");
+      tile.surface.material = createColorMaterial(sceneRef, "#c4a36e");
       tile.surface.material.roughness = stone ? 0.92 : 0.72;
       tile.surface.material.metallic = stone ? 0.08 : 0.04;
 
@@ -691,7 +681,7 @@ function getTrackKind(segmentIndex) {
 
       state.playerShadow = BABYLON.MeshBuilder.CreateDisc("player-shadow", { radius: 1.2, tessellation: 24 }, scene);
       state.playerShadow.rotation.x = Math.PI / 2;
-      state.playerShadow.position.y = 0.05;
+      state.playerShadow.position.y = 0.4;
       const shadowMat = new BABYLON.StandardMaterial("shadow-mat", scene);
       shadowMat.diffuseColor = new BABYLON.Color3(0, 0, 0);
       shadowMat.alpha = 0.3;
@@ -1024,51 +1014,37 @@ function getTrackKind(segmentIndex) {
     }
 
     function spawnThorn(laneIndex, z) {
-      const root = new BABYLON.TransformNode("barrier-root-" + state.spawnId, scene);
+      const root = new BABYLON.TransformNode("fence-root-" + state.spawnId, scene);
 
-      const orangeMat = createColorMaterial(scene, "#ff6600");
-      orangeMat.roughness = 0.6;
-      const whiteMat = createColorMaterial(scene, "#ffffff");
-      whiteMat.roughness = 0.6;
-      const redMat = createColorMaterial(scene, "#dd0000");
-      redMat.roughness = 0.5;
+      const woodMat = createColorMaterial(scene, "#8B5A2B");
+      woodMat.roughness = 0.85;
+      const woodLightMat = createColorMaterial(scene, "#A0724A");
+      woodLightMat.roughness = 0.8;
 
-      const post1 = BABYLON.MeshBuilder.CreateCylinder("bp1-" + state.spawnId, { height: 3.5, diameter: 0.2 }, scene);
-      post1.parent = root; post1.position = new BABYLON.Vector3(-1, 1.75, 0); post1.material = orangeMat;
-      const post2 = BABYLON.MeshBuilder.CreateCylinder("bp2-" + state.spawnId, { height: 3.5, diameter: 0.2 }, scene);
-      post2.parent = root; post2.position = new BABYLON.Vector3(1, 1.75, 0); post2.material = orangeMat;
+      const fenceWidth = 12;
+      const postCount = 7;
+      const spacing = fenceWidth / (postCount - 1);
 
-      const bar1 = BABYLON.MeshBuilder.CreateBox("bbar1-" + state.spawnId, { width: 2.5, height: 0.3, depth: 0.1 }, scene);
-      bar1.parent = root; bar1.position.y = 3.0; bar1.material = whiteMat;
-      const bar2 = BABYLON.MeshBuilder.CreateBox("bbar2-" + state.spawnId, { width: 2.5, height: 0.3, depth: 0.1 }, scene);
-      bar2.parent = root; bar2.position.y = 2.2; bar2.material = orangeMat;
-      const bar3 = BABYLON.MeshBuilder.CreateBox("bbar3-" + state.spawnId, { width: 2.5, height: 0.3, depth: 0.1 }, scene);
-      bar3.parent = root; bar3.position.y = 1.4; bar3.material = whiteMat;
+      for (let i = 0; i < postCount; i++) {
+        const post = BABYLON.MeshBuilder.CreateBox("fp-" + state.spawnId + "-" + i, { width: 0.2, height: 2.2, depth: 0.2 }, scene);
+        post.parent = root;
+        post.position = new BABYLON.Vector3(-fenceWidth / 2 + i * spacing, 1.1, 0);
+        post.material = woodMat;
 
-      const signBoard = BABYLON.MeshBuilder.CreateBox("bsign-" + state.spawnId, { width: 1.6, height: 1.6, depth: 0.08 }, scene);
-      signBoard.parent = root; signBoard.position.y = 4.2;
-      signBoard.rotation.y = Math.PI / 4;
-      const signMat = new BABYLON.StandardMaterial("sign-mat-" + state.spawnId, scene);
-      signMat.diffuseColor = new BABYLON.Color3(1, 0.85, 0);
-      signBoard.material = signMat;
+        const top = BABYLON.MeshBuilder.CreateBox("fpt-" + state.spawnId + "-" + i, { width: 0.3, height: 0.15, depth: 0.3 }, scene);
+        top.parent = root;
+        top.position = new BABYLON.Vector3(-fenceWidth / 2 + i * spacing, 2.25, 0);
+        top.material = woodLightMat;
+      }
 
-      const xBar1 = BABYLON.MeshBuilder.CreateBox("xbar1-" + state.spawnId, { width: 1.8, height: 0.2, depth: 0.12 }, scene);
-      xBar1.parent = signBoard; xBar1.rotation.z = Math.PI / 4; xBar1.material = redMat;
-      const xBar2 = BABYLON.MeshBuilder.CreateBox("xbar2-" + state.spawnId, { width: 1.8, height: 0.2, depth: 0.12 }, scene);
-      xBar2.parent = signBoard; xBar2.rotation.z = -Math.PI / 4; xBar2.material = redMat;
+      for (let r = 0; r < 3; r++) {
+        const rail = BABYLON.MeshBuilder.CreateBox("fr-" + state.spawnId + "-" + r, { width: fenceWidth, height: 0.15, depth: 0.1 }, scene);
+        rail.parent = root;
+        rail.position.y = 0.6 + r * 0.7;
+        rail.material = woodLightMat;
+      }
 
-      const light1 = BABYLON.MeshBuilder.CreateSphere("blight-" + state.spawnId, { diameter: 0.3 }, scene);
-      light1.parent = root; light1.position = new BABYLON.Vector3(-1, 3.6, 0);
-      const lightMat = new BABYLON.StandardMaterial("light-mat-" + state.spawnId, scene);
-      lightMat.emissiveColor = new BABYLON.Color3(1, 0.3, 0);
-      lightMat.diffuseColor = new BABYLON.Color3(1, 0.3, 0);
-      light1.material = lightMat;
-      const light2 = light1.clone("blight2-" + state.spawnId);
-      light2.parent = root; light2.position = new BABYLON.Vector3(1, 3.6, 0);
-      light2.material = lightMat;
-
-      const col = spawnColumns[Math.floor(Math.random() * spawnColumns.length)];
-      root.position = new BABYLON.Vector3(col, 0, z);
+      root.position = new BABYLON.Vector3(0, 0, z);
 
       state.spawnId++;
       state.gates.push({
@@ -1149,7 +1125,7 @@ function getTrackKind(segmentIndex) {
       if (state.isJumping) {
         state.jumpVelocity -= 20 * delta;
         state.playerY += state.jumpVelocity * delta;
-        if (state.playerY <= 1.0) {
+        if (state.playerY <= 1.2) {
           state.playerY = 1.0;
           state.isJumping = false;
           state.jumpVelocity = 0;
@@ -1525,8 +1501,7 @@ function checkForFall() {
         } else {
           item.vx *= Math.exp(-2 * delta);
           item.vz *= Math.exp(-2 * delta);
-          item.mesh.position.y = 1.0 + Math.abs(Math.sin(performance.now() * 0.005 + item.value)) * 0.3;
-          item.mesh.rotation.x += delta * (state.speed * 0.15);
+          item.mesh.position.y = 1.2;
         }
 
         if (item.mesh.position.z < -8 || Math.abs(item.mesh.position.x) > 12) {
@@ -1540,7 +1515,7 @@ function checkForFall() {
         const dz = item.mesh.position.z - playerPos.z;
         const overlapX = (pHalfW + iHalfW) - Math.abs(dx);
         const overlapZ = (pHalfD + iHalfD) - Math.abs(dz);
-        if (!state.falling && !item.launched && overlapX > 0 && overlapZ > 0) {
+        if (!state.falling && !state.isJumping && !item.launched && overlapX > 0 && overlapZ > 0) {
           if (item.value === state.playerValue) {
             handlePickup(item);
             disposeEntity(item);
@@ -1676,10 +1651,10 @@ function checkForFall() {
           return false;
         }
 
-        if (!state.falling && Math.abs(item.mesh.position.z - playerPos.z) < 1.3 && Math.abs(item.mesh.position.x - playerPos.x) < 1.35) {
+        if (!state.falling && !state.isJumping && Math.abs(item.mesh.position.z - playerPos.z) < 1.5) {
           state.playerValue = Math.floor(state.playerValue / 2);
           if (state.playerValue < 2) {
-            endGame("Your ball was destroyed by thorns!");
+            endGame("You crashed into a fence!");
             disposeThorn(item);
             return false;
           }
@@ -1924,7 +1899,7 @@ function checkForFall() {
       }
       if (event.key === " " && state.running && !state.isJumping) {
         state.isJumping = true;
-        state.jumpVelocity = 10;
+        state.jumpVelocity = 18;
         playJumpPuff(playerBall.position.clone());
       }
     });
@@ -1962,7 +1937,7 @@ function checkForFall() {
       const deltaY = event.clientY - (state.touchStartY || event.clientY);
       if (deltaY < -30 && state.running && !state.isJumping) {
         state.isJumping = true;
-        state.jumpVelocity = 10;
+        state.jumpVelocity = 18;
         playJumpPuff(playerBall.position.clone());
       } else if (Math.abs(deltaX) > 8) {
         state.targetX = clampTargetX(state.touchStartTargetX + deltaX * 0.022);
