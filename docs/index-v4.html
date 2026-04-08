@@ -268,7 +268,7 @@
       return Promise.all(Object.entries(carModels).map(([val, file]) => {
         return BABYLON.SceneLoader.ImportMeshAsync("", MODELS_PATH, file, scene).then((result) => {
           const wrapper = new BABYLON.TransformNode("car-wrapper-" + val, scene);
-          wrapper.rotation.y = Math.PI;
+          wrapper.rotation.y = 0;
           const pivot = new BABYLON.TransformNode("car-pivot-" + val, scene);
           pivot.parent = wrapper;
           const root = result.meshes[0];
@@ -288,15 +288,15 @@
       64: 0.75, 128: 0.85, 256: 0.95, 512: 1.0, 1024: 1.1, 2048: 1.2
     };
 
-    function createCarInstance(value, scene) {
-      const template = loadedCarMeshes[value] || loadedCarMeshes[2];
+    function createCarInstance(value, scene, facingPlayer) {
+      const template = loadedCarMeshes[value] || (value > 2048 ? loadedCarMeshes[2048] : loadedCarMeshes[2]);
       if (!template) return null;
       const clone = template.clone("car-" + Math.random());
       clone.setEnabled(true);
       clone.getChildMeshes().forEach((m) => m.setEnabled(true));
       const s = ((carScaleMap[value] || 0.6) + 0.3) * 1.62;
       clone.scaling = new BABYLON.Vector3(s, s, s);
-      clone.rotation.y = 0;
+      clone.rotation.y = facingPlayer ? Math.PI : 0;
       return clone;
     }
 
@@ -630,7 +630,7 @@ function getTrackKind(segmentIndex) {
       )).then(() => {
         for (let z = 0; z < STAGE_LENGTH * 1.2; z += 4 + Math.random() * 3) {
           for (const side of [-1, 1]) {
-            const x = side * (9 + Math.random() * 4);
+            const x = side * (14 + Math.random() * 5);
             const isTree = Math.random() < 0.4;
             const file = isTree
               ? treeFiles[Math.floor(Math.random() * treeFiles.length)]
@@ -669,7 +669,7 @@ function getTrackKind(segmentIndex) {
       playerBall = new BABYLON.TransformNode("player-root", scene);
       playerBall.position = new BABYLON.Vector3(0, 1.0, 0);
 
-      state.playerCarMesh = createCarInstance(state.playerValue, scene);
+      state.playerCarMesh = createCarInstance(state.playerValue, scene, false);
       if (state.playerCarMesh) {
         state.playerCarMesh.parent = playerBall;
         state.playerCarMesh.position = BABYLON.Vector3.Zero();
@@ -926,7 +926,7 @@ function getTrackKind(segmentIndex) {
       if (state.playerCarMesh) {
         state.playerCarMesh.dispose();
       }
-      state.playerCarMesh = createCarInstance(state.playerValue, scene);
+      state.playerCarMesh = createCarInstance(state.playerValue, scene, false);
       if (state.playerCarMesh) {
         state.playerCarMesh.parent = playerBall;
         state.playerCarMesh.position = BABYLON.Vector3.Zero();
@@ -1000,7 +1000,7 @@ function getTrackKind(segmentIndex) {
       }
       root.position = new BABYLON.Vector3(col, 0, z);
 
-      const carMesh = createCarInstance(value, scene);
+      const carMesh = createCarInstance(value, scene, true);
       if (carMesh) {
         carMesh.parent = root;
         carMesh.position = BABYLON.Vector3.Zero();
@@ -1501,15 +1501,13 @@ function checkForFall() {
       const playerPos = playerBall.position;
       const playerRadius = 1.0;
       state.collectibles = state.collectibles.filter((item) => {
-        item.mesh.position.z -= state.speed * 0.6 * delta;
-        if (!item.vx) { item.vx = 0; item.vz = 0; }
-
-        item.mesh.position.x += item.vx * delta;
-        item.mesh.position.z += item.vz * delta;
-
         if (item.launched) {
+          if (!item.vx) item.vx = 0;
+          if (!item.vz) item.vz = 0;
           if (!item.vy) item.vy = 0;
           item.vy -= 15 * delta;
+          item.mesh.position.x += item.vx * delta;
+          item.mesh.position.z += item.vz * delta;
           item.mesh.position.y += item.vy * delta;
           item.mesh.rotation.y += (item.spinSpeed || 5) * delta;
           item.mesh.rotation.x += delta * 3;
@@ -1518,10 +1516,10 @@ function checkForFall() {
             return false;
           }
         } else {
-          item.vx *= Math.exp(-2 * delta);
-          item.vz *= Math.exp(-2 * delta);
+          item.mesh.position.z -= state.speed * delta;
           item.mesh.position.y = 1.2;
           item.mesh.rotation.x = 0;
+          item.mesh.rotation.y = 0;
           item.mesh.rotation.z = 0;
         }
 
@@ -1556,8 +1554,8 @@ function checkForFall() {
           item.vx = sideDir * baseForce * forceMult * (0.6 + Math.random() * 0.4);
           item.vz = (state.speed * 0.15 + Math.random() * 1.5) * forceMult;
           item.vy = (0.5 + diff * 0.75) + Math.random() * 1;
-          item.launched = diff >= 3;
-          item.spinSpeed = diff >= 3 ? sideDir * (8 + Math.random() * 6) : sideDir * 2;
+          item.launched = true;
+          item.spinSpeed = sideDir * (8 + Math.random() * 6);
           state.score += item.value;
           updateScore();
           playCollisionEffect(item.mesh.position.clone(), diff);
@@ -1651,7 +1649,7 @@ function checkForFall() {
         item.carMesh.getChildMeshes().forEach((m) => m.dispose());
         item.carMesh.dispose();
       }
-      const newCar = createCarInstance(item.value, scene);
+      const newCar = createCarInstance(item.value, scene, true);
       if (newCar) {
         newCar.parent = item.mesh;
         newCar.position = BABYLON.Vector3.Zero();
@@ -1920,7 +1918,7 @@ function checkForFall() {
       }
       if (event.key === " " && state.running && !state.isJumping && state.phase === "running") {
         state.isJumping = true;
-        state.jumpVelocity = 18;
+        state.jumpVelocity = 28;
         playJumpPuff(playerBall.position.clone());
       }
     });
@@ -1958,7 +1956,7 @@ function checkForFall() {
       const deltaY = event.clientY - (state.touchStartY || event.clientY);
       if (deltaY < -30 && state.running && !state.isJumping && state.phase === "running") {
         state.isJumping = true;
-        state.jumpVelocity = 18;
+        state.jumpVelocity = 28;
         playJumpPuff(playerBall.position.clone());
       } else if (Math.abs(deltaX) > 8) {
         state.targetX = clampTargetX(state.touchStartTargetX + deltaX * 0.022);
