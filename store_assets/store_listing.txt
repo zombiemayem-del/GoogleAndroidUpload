@@ -1,0 +1,24 @@
+APP NAME: Roll & Dash: 2048 Race
+
+SHORT DESCRIPTION (80 chars):
+Roll, merge matching numbers and race to 2048! A fun and colorful number game.
+
+FULL DESCRIPTION:
+Roll & Dash: 2048 Race is a colorful number-merging game where you guide a ball down a track and combine matching numbers to grow bigger.
+
+HOW TO PLAY:
+- Swipe left and right to steer your ball
+- Collect balls with the same number to merge and double your value
+- Dodge thorns that cut your number in half
+- Balance carefully on narrow bridges
+- Reach the finish ramp and climb for bonus score multipliers
+
+FEATURES:
+- Easy one-finger swipe controls suitable for all ages
+- Colorful 3D graphics with fun particle effects
+- Numbers go from 2 all the way up to 2048
+- Finish ramp with increasing score multipliers
+- Quick sessions perfect for playing on the go
+
+CATEGORY: Casual
+CONTENT RATING: Everyone
